@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大份吧 — Chunithm 自製譜面社群</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --bg2: #13131f;
+      --bg3: #1a1a2e;
+      --card-bg: #16162a;
+      --border: #2a2a44;
+      --border-bright: #3a3a60;
+      --orange: #ff6f00;
+      --orange-light: #ffa040;
+      --orange-glow: rgba(255,111,0,0.35);
+      --neon-purple: #b04dff;
+      --neon-blue: #3de4ff;
+      --neon-pink: #ff3daa;
+      --expert: #c0392b;
+      --master: #7d3c98;
+      --ultima: #1a1a1a;
+      --worlds-end: #e8d5f5;
+      --text: #eaeaf0;
+      --text-dim: #8888aa;
+      --text-dimmer: #55556a;
+      --radius: 12px;
+      --shadow-glow: 0 0 20px rgba(255,111,0,0.2), 0 4px 24px rgba(0,0,0,0.6);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+    .neon-orange { color: var(--orange-light); text-shadow: 0 0 12px var(--orange-glow); }
+    .neon-purple { color: var(--neon-purple); }
+    .neon-blue   { color: var(--neon-blue); }
+
+    /* ===== HEADER ===== */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,20,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--neon-purple) 100%);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 18px; color: #fff;
+      box-shadow: 0 0 16px var(--orange-glow);
+    }
+    .logo-text {
+      font-size: 20px; font-weight: 900;
+      background: linear-gradient(90deg, var(--orange-light), var(--neon-purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+    nav { display: flex; align-items: center; gap: 4px; }
+    nav a {
+      color: var(--text-dim); text-decoration: none;
+      padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    nav a:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+    nav a.active { color: var(--orange-light); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-submit {
+      background: linear-gradient(135deg, var(--orange) 0%, #e05500 100%);
+      color: #fff; border: none; cursor: pointer;
+      padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 700;
+      box-shadow: 0 0 16px var(--orange-glow); transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 0 24px var(--orange-glow), 0 4px 12px rgba(0,0,0,0.4); }
+    .btn-login {
+      background: transparent; color: var(--text-dim);
+      border: 1px solid var(--border-bright); cursor: pointer;
+      padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s;
+    }
+    .btn-login:hover { color: var(--text); border-color: var(--text-dim); }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text-dim); border-radius: 2px; transition: all 0.3s; }
+
+    /* ===== MOBILE DRAWER ===== */
+    .drawer-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; right: -280px; bottom: 0; width: 260px; z-index: 201;
+      background: var(--bg2); border-left: 1px solid var(--border);
+      padding: 24px 20px; display: flex; flex-direction: column; gap: 8px; transition: right 0.3s ease;
+    }
+    .drawer.open { right: 0; }
+    .drawer-close { align-self: flex-end; background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; margin-bottom: 8px; }
+    .drawer a { color: var(--text-dim); text-decoration: none; padding: 12px 16px; border-radius: 8px; font-size: 15px; font-weight: 500; transition: all 0.2s; }
+    .drawer a:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border-bright); border-radius: 20px;
+      padding: 40px 36px; width: 90%; max-width: 400px; text-align: center;
+      box-shadow: var(--shadow-glow); animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn { from { opacity:0; transform:scale(0.92) translateY(20px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .modal p { color: var(--text-dim); font-size: 14px; margin-bottom: 28px; }
+    .oauth-btn {
+      display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%;
+      padding: 13px 20px; border-radius: 10px; border: 1px solid var(--border-bright);
+      background: var(--bg3); color: var(--text); font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; margin-bottom: 12px;
+    }
+    .oauth-btn:hover { border-color: var(--orange); background: rgba(255,111,0,0.08); }
+    .modal-close-btn { background: none; border: none; color: var(--text-dimmer); font-size: 13px; cursor: pointer; margin-top: 8px; }
+    .modal-close-btn:hover { color: var(--text-dim); }
+
+    /* ===== HERO CAROUSEL ===== */
+    .carousel-wrap { position: relative; overflow: hidden; height: 340px; }
+    .carousel-track { display: flex; width: 300%; height: 100%; transition: transform 0.6s cubic-bezier(0.4,0,0.2,1); }
+    .carousel-slide { width: calc(100% / 3); position: relative; overflow: hidden; flex-shrink: 0; }
+    .carousel-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 0.6s ease; }
+    .carousel-slide:hover .carousel-bg { transform: scale(1.04); }
+    .carousel-overlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(13,13,20,0.95) 0%, rgba(13,13,20,0.5) 60%, transparent 100%); }
+    .carousel-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 48px 36px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+    .carousel-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,111,0,0.2); border: 1px solid var(--orange); color: var(--orange-light); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .carousel-title { font-size: 28px; font-weight: 900; line-height: 1.2; margin-bottom: 6px; }
+    .carousel-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+    .difficulty-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+    .diff-master { background: #4a1a7a; color: #d59fff; border: 1px solid #7d3c98; }
+    .diff-ultima { background: #1a1a1a; color: #aaa;    border: 1px solid #555; }
+    .diff-expert { background: #5a0a0a; color: #ff9999; border: 1px solid #c0392b; }
+    .diff-we     { background: #2a1a2a; color: var(--worlds-end); border: 1px solid #c8a8e0; }
+    .carousel-rating { display: flex; align-items: center; gap: 6px; }
+    .stars { color: #ffd700; font-size: 14px; letter-spacing: 1px; }
+    .carousel-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-viewer { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-viewer:hover { background: rgba(255,255,255,0.17); }
+    .btn-dl { background: var(--orange); border: none; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px var(--orange-glow); transition: all 0.2s; white-space: nowrap; }
+    .btn-dl:hover { background: var(--orange-light); }
+    .carousel-dots { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; cursor: pointer; transition: all 0.3s; padding: 0; }
+    .dot.active { background: var(--orange); width: 24px; border-radius: 4px; box-shadow: 0 0 8px var(--orange-glow); }
+    .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(13,13,20,0.6); border: 1px solid var(--border-bright); color: var(--text); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: all 0.2s; }
+    .carousel-arrow:hover { background: rgba(255,111,0,0.2); border-color: var(--orange); }
+    .arrow-prev { left: 20px; }
+    .arrow-next { right: 20px; }
+
+    /* ===== SEARCH BAR ===== */
+    .search-section { padding: 24px 32px 0; }
+    .search-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; }
+    .search-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-input-wrap { flex: 1; min-width: 200px; position: relative; }
+    .search-input-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dimmer); }
+    .search-input { width: 100%; background: var(--bg3); border: 1px solid var(--border-bright); color: var(--text); padding: 11px 14px 11px 42px; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .search-input::placeholder { color: var(--text-dimmer); }
+    .search-input:focus { border-color: var(--orange); }
+    .sort-select { background: var(--bg3); border: 1px solid var(--border-bright); color: var(--text); padding: 11px 14px; border-radius: 8px; font-size: 14px; outline: none; cursor: pointer; }
+    .sort-select:focus { border-color: var(--orange); }
+    .filter-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filter-label { font-size: 12px; font-weight: 600; color: var(--text-dimmer); white-space: nowrap; }
+    .range-wrap { display: flex; align-items: center; gap: 8px; }
+    .range-wrap input[type=range] { -webkit-appearance: none; width: 100px; height: 4px; background: var(--border-bright); border-radius: 2px; outline: none; cursor: pointer; }
+    .range-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px var(--orange-glow); cursor: pointer; }
+    .range-value { font-size: 13px; color: var(--orange-light); font-weight: 700; min-width: 30px; }
+    .diff-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .diff-tag { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; letter-spacing: 0.5px; }
+    .diff-tag.expert { background: rgba(192,57,43,0.15); color: #ff9999; border-color: rgba(192,57,43,0.4); }
+    .diff-tag.expert.active { background: rgba(192,57,43,0.4); border-color: #c0392b; }
+    .diff-tag.master { background: rgba(125,60,152,0.15); color: #d59fff; border-color: rgba(125,60,152,0.4); }
+    .diff-tag.master.active { background: rgba(125,60,152,0.4); border-color: #7d3c98; }
+    .diff-tag.ultima { background: rgba(80,80,80,0.15); color: #aaa; border-color: rgba(80,80,80,0.4); }
+    .diff-tag.ultima.active { background: rgba(80,80,80,0.4); border-color: #666; }
+    .diff-tag.we { background: rgba(200,168,224,0.1); color: var(--worlds-end); border-color: rgba(200,168,224,0.3); }
+    .diff-tag.we.active { background: rgba(200,168,224,0.25); border-color: #c8a8e0; }
+    .topic-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .topic-tag { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-dim); transition: all 0.2s; }
+    .topic-tag:hover { border-color: var(--orange); color: var(--orange-light); }
+    .topic-tag.active { background: rgba(255,111,0,0.12); border-color: var(--orange); color: var(--orange-light); }
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+    .toggle { position: relative; width: 34px; height: 18px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: var(--border-bright); border-radius: 18px; transition: background 0.3s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform 0.3s; }
+    .toggle input:checked + .toggle-slider { background: var(--orange); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(16px); }
+    .toggle-label { font-size: 12px; color: var(--text-dim); }
+
+    /* ===== CHART GRID ===== */
+    .grid-section { padding: 20px 32px 40px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; display: block; width: 4px; height: 18px; background: linear-gradient(to bottom, var(--orange), var(--neon-purple)); border-radius: 2px; }
+    .result-count { font-size: 13px; color: var(--text-dimmer); }
+    .chart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .chart-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.25s; position: relative; display: flex; flex-direction: column; }
+    .chart-card:hover { border-color: var(--orange); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(255,111,0,0.15), 0 0 0 1px rgba(255,111,0,0.1); }
+    .chart-card:hover .card-hover-actions { opacity: 1; }
+    .chart-card:hover .card-cover-img { transform: scale(1.06); }
+    .card-cover { position: relative; overflow: hidden; aspect-ratio: 16/9; background: var(--bg3); }
+    .card-cover-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 48px; background: linear-gradient(135deg, #1a1a2e, #2a1a3e); transition: transform 0.4s ease; }
+    .card-diff-badge { position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+    .card-viewer-badge { position: absolute; top: 8px; left: 8px; background: rgba(61,228,255,0.15); border: 1px solid rgba(61,228,255,0.3); color: var(--neon-blue); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .card-hover-actions { position: absolute; inset: 0; background: rgba(13,13,20,0.7); display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0; transition: opacity 0.25s; }
+    .card-hover-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
+    .card-hover-btn:hover { background: var(--orange); border-color: var(--orange); }
+    .card-hover-btn.primary { background: var(--orange); border-color: var(--orange); }
+    .card-hover-btn.primary:hover { background: var(--orange-light); }
+    .card-body { padding: 12px 14px 14px; flex: 1; display: flex; flex-direction: column; }
+    .card-title { font-size: 14px; font-weight: 800; line-height: 1.3; margin-bottom: 4px; color: var(--text); }
+    .card-composer { font-size: 12px; color: var(--text-dimmer); margin-bottom: 4px; }
+    .card-designer { font-size: 11px; color: var(--text-dimmer); margin-bottom: 10px; }
+    .card-designer span { color: var(--orange-light); }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .card-rating { display: flex; align-items: center; gap: 4px; }
+    .stars-sm { color: #ffd700; font-size: 11px; }
+    .rating-val { font-size: 12px; font-weight: 700; color: var(--text); }
+    .card-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .badge-zip { background: rgba(255,111,0,0.12); border: 1px solid rgba(255,111,0,0.25); color: var(--orange-light); padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+    .card-stats { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+    .stat { font-size: 11px; color: var(--text-dimmer); display: flex; align-items: center; gap: 3px; }
+    .load-more-wrap { display: flex; justify-content: center; padding: 16px 0 8px; }
+    .btn-load-more { background: var(--bg2); border: 1px solid var(--border-bright); color: var(--text-dim); padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-load-more:hover { border-color: var(--orange); color: var(--orange-light); }
+
+    /* ===== FOOTER ===== */
+    footer { border-top: 1px solid var(--border); padding: 28px 32px; background: var(--bg2); }
+    .footer-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .footer-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .footer-disclaimer { font-size: 12px; color: var(--text-dimmer); line-height: 1.6; max-width: 440px; }
+    .footer-links { display: flex; flex-direction: column; gap: 8px; }
+    .footer-links a { color: var(--text-dim); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--orange-light); }
+    .footer-copy { text-align: center; font-size: 11px; color: var(--text-dimmer); margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1100px) { .chart-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 840px) {
+      nav { display: none; }
+      .hamburger { display: flex; }
+      .carousel-wrap { height: 260px; }
+      .carousel-content { padding: 16px 24px 24px; }
+      .carousel-title { font-size: 20px; }
+      .chart-grid { grid-template-columns: repeat(2, 1fr); }
+      .search-section, .grid-section { padding-left: 16px; padding-right: 16px; }
+    }
+    @media (max-width: 500px) {
+      .header-right .btn-submit { display: none; }
+      .carousel-wrap { height: 220px; }
+      .carousel-title { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">大</div>
+    <span class="logo-text">大份吧</span>
+  </a>
+  <nav>
+    <a href="#" class="active">探索譜面</a>
+    <a href="#">線上展譜</a>
+    <a href="#">工具與教學</a>
+  </nav>
+  <div class="header-right">
+    <button class="btn-submit" onclick="openModal()">✦ 投稿自製譜</button>
+    <button class="btn-login" onclick="openModal()">登入 / 註冊</button>
+    <div class="hamburger" onclick="openDrawer()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</header>
+
+<!-- ===== MOBILE DRAWER ===== -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <a href="#">🎵 探索譜面</a>
+  <a href="#">🖼️ 線上展譜</a>
+  <a href="#">🛠️ 工具與教學</a>
+  <button class="btn-submit" onclick="closeDrawer();openModal();" style="margin-top:8px;">✦ 投稿自製譜</button>
+  <button class="btn-login"  onclick="closeDrawer();openModal();" style="margin-top:6px;">登入 / 註冊</button>
+</div>
+
+<!-- ===== LOGIN MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <h2>👾 加入大份吧</h2>
+    <p>使用第三方帳號快速登入，無需密碼或驗證信</p>
+    <button class="oauth-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      以 Discord 帳號登入
+    </button>
+    <button class="oauth-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      以 Google 帳號登入
+    </button>
+    <button class="modal-close-btn" onclick="closeModal()">取消，稍後再說</button>
+  </div>
+</div>
+
+<!-- ===== HERO CAROUSEL ===== -->
+<div class="carousel-wrap">
+  <button class="carousel-arrow arrow-prev" onclick="prevSlide()">‹</button>
+  <button class="carousel-arrow arrow-next" onclick="nextSlide()">›</button>
+
+  <div class="carousel-track" id="carouselTrack">
+    <!-- Slide 1 -->
+    <div class="carousel-slide">
+      <div class="carousel-bg" style="background:linear-gradient(135deg,#1a0a2e 0%,#2d0a0a 50%,#0a1a2e 100%);"></div>
+      <div class="carousel-overlay"></div>
+      <div class="carousel-content">
+        <div>
+          <div class="carousel-badge">🔥 本週熱門</div>
+          <div class="carousel-title">Sølips</div>
+          <div class="carousel-meta">Camellia &nbsp;·&nbsp; Chart by <span class="neon-orange">OSHIMA</span></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="difficulty-badge diff-ultima">ULTIMA 15.4</span>
+            <div class="carousel-rating">
+              <span class="stars">★★★★★</span>
+              <span style="font-size:13px;color:var(--text-dim)">4.9 (312)</span>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-actions">
+          <button class="btn-viewer">🖼️ 查看展譜圖</button>
+          <button class="btn-dl">📦 下載遊玩包</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="carousel-slide">
+      <div class="carousel-bg" style="background:linear-gradient(135deg,#0a1a2e 0%,#1a0a3e 50%,#0a2a1a 100%);"></div>
+      <div class="carousel-overlay"></div>
+      <div class="carousel-content">
+        <div>
+          <div class="carousel-badge">⭐ 編輯精選</div>
+          <div class="carousel-title">PUPA</div>
+          <div class="carousel-meta">の虫 &nbsp;·&nbsp; Chart by <span class="neon-purple">mizuki</span></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="difficulty-badge diff-master">MASTER 14.8</span>
+            <div class="carousel-rating">
+              <span class="stars">★★★★★</span>
+              <span style="font-size:13px;color:var(--text-dim)">4.7 (208)</span>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-actions">
+          <button class="btn-viewer">🖼️ 查看展譜圖</button>
+          <button class="btn-dl">📦 下載遊玩包</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="carousel-slide">
+      <div class="carousel-bg" style="background:linear-gradient(135deg,#1a1500 0%,#2a0a1a 50%,#001a2a 100%);"></div>
+      <div class="carousel-overlay"></div>
+      <div class="carousel-content">
+        <div>
+          <div class="carousel-badge">🆕 最新發布</div>
+          <div class="carousel-title">幽冥烏鴉</div>
+          <div class="carousel-meta">Team Shanghai Alice &nbsp;·&nbsp; Chart by <span class="neon-blue">東方組</span></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="difficulty-badge diff-expert">EXPERT 13.9</span>
+            <div class="carousel-rating">
+              <span class="stars">★★★★☆</span>
+              <span style="font-size:13px;color:var(--text-dim)">4.3 (89)</span>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-actions">
+          <button class="btn-viewer">🖼️ 查看展譜圖</button>
+          <button class="btn-dl">📦 下載遊玩包</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="carousel-dots">
+    <button class="dot active" onclick="goSlide(0)"></button>
+    <button class="dot" onclick="goSlide(1)"></button>
+    <button class="dot" onclick="goSlide(2)"></button>
+  </div>
+</div>
+
+<!-- ===== SEARCH & FILTER ===== -->
+<div class="search-section">
+  <div class="search-card">
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" type="text" placeholder="搜尋曲名、作曲家、譜面師…" />
+      </div>
+      <select class="sort-select">
+        <option>最新發布</option>
+        <option>評分最高</option>
+        <option>最多下載</option>
+        <option>定數由高至低</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">定數</span>
+      <div class="range-wrap">
+        <span class="range-value" id="minVal">1.0</span>
+        <input type="range" min="10" max="160" value="10" step="1" oninput="updateRange('min',this.value)">
+        <span style="color:var(--text-dimmer);font-size:12px;">—</span>
+        <input type="range" min="10" max="160" value="160" step="1" oninput="updateRange('max',this.value)">
+        <span class="range-value" id="maxVal">16.0</span>
+      </div>
+      <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
+      <div class="diff-tags">
+        <button class="diff-tag expert active" onclick="toggleTag(this)">EXPERT</button>
+        <button class="diff-tag master active" onclick="toggleTag(this)">MASTER</button>
+        <button class="diff-tag ultima active" onclick="toggleTag(this)">ULTIMA</button>
+        <button class="diff-tag we active" onclick="toggleTag(this)">WORLD'S END</button>
+      </div>
+      <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
+      <label class="toggle-wrap">
+        <div class="toggle">
+          <input type="checkbox" />
+          <div class="toggle-slider"></div>
+        </div>
+        <span class="toggle-label">僅含展譜圖</span>
+      </label>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="topic-tags">
+        <button class="topic-tag" onclick="toggleTag(this)"># 地力譜</button>
+        <button class="topic-tag active" onclick="toggleTag(this)"># 手速考驗</button>
+        <button class="topic-tag" onclick="toggleTag(this)"># 配置譜</button>
+        <button class="topic-tag active" onclick="toggleTag(this)"># 創意極佳</button>
+        <button class="topic-tag" onclick="toggleTag(this)"># 認識考驗</button>
+        <button class="topic-tag" onclick="toggleTag(this)"># 初心者友善</button>
+        <button class="topic-tag" onclick="toggleTag(this)"># 東方系列</button>
+        <button class="topic-tag" onclick="toggleTag(this)"># VOCALOID</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHART GRID ===== -->
+<div class="grid-section">
+  <div class="section-header">
+    <div class="section-title">所有自製譜面</div>
+    <span class="result-count">共 347 筆</span>
+  </div>
+  <div class="chart-grid" id="chartGrid"></div>
+  <div class="load-more-wrap">
+    <button class="btn-load-more">載入更多譜面 ↓</button>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <div class="logo-icon" style="width:28px;height:28px;font-size:14px;">大</div>
+        <span style="font-size:16px;font-weight:900;background:linear-gradient(90deg,var(--orange-light),var(--neon-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">大份吧</span>
+      </div>
+      <p class="footer-disclaimer">
+        本站為 Chunithm 粉絲自製譜面社群平台，所有音源版權歸原始作曲家所有。<br>
+        自製譜面僅供 UMIGURI 等模擬器研究與同好交流使用，不提供任何商業服務。<br>
+        Chunithm 為 SEGA 旗下音樂遊戲，本站與 SEGA 無任何官方關係。
+      </p>
+    </div>
+    <div class="footer-links">
+      <a href="#">💬 官方 Discord 社群</a>
+      <a href="#">🛠️ UMIGURI 模擬器教學</a>
+      <a href="#">🎼 Margrete 工具下載</a>
+      <a href="#">📋 投稿規則</a>
+    </div>
+  </div>
+  <p class="footer-copy">© 2026 大份吧 · 純粹覺得名字好玩的音遊自製譜面社群</p>
+</footer>
+
+<script>
+// ---- Carousel ----
+let currentSlide = 0;
+const totalSlides = 3;
+const track = document.getElementById('carouselTrack');
+const dots = document.querySelectorAll('.dot');
+function goSlide(idx) {
+  currentSlide = ((idx % totalSlides) + totalSlides) % totalSlides;
+  track.style.transform = `translateX(-${currentSlide * (100 / totalSlides)}%)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+}
+function prevSlide() { goSlide(currentSlide - 1); }
+function nextSlide() { goSlide(currentSlide + 1); }
+setInterval(() => nextSlide(), 4500);
+
+// ---- Modal ----
+const modalOverlay = document.getElementById('modalOverlay');
+function openModal() { modalOverlay.classList.add('open'); }
+function closeModal() { modalOverlay.classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target === modalOverlay) closeModal(); }
+
+// ---- Drawer ----
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// ---- Range Slider ----
+function updateRange(type, val) {
+  document.getElementById(type === 'min' ? 'minVal' : 'maxVal').textContent = (parseInt(val)/10).toFixed(1);
+}
+
+// ---- Tags ----
+function toggleTag(el) { el.classList.toggle('active'); }
+
+// ---- Chart Cards ----
+const CHARTS = [
+  { title:"Calamity Fortune",   composer:"xi",                       designer:"七瀬",    diff:"MASTER",      rating:"15.0", stars:4.9, votes:412, hasViewer:true,  emoji:"🎸" },
+  { title:"Grievous Lady",      composer:"Team Grimoire",            designer:"あまね",  diff:"ULTIMA",      rating:"14.9", stars:4.8, votes:388, hasViewer:true,  emoji:"🌙" },
+  { title:"Mope Mope",          composer:"LeaF",                     designer:"あゆみん",diff:"EXPERT",      rating:"13.5", stars:4.2, votes:156, hasViewer:false, emoji:"🌸" },
+  { title:"廃墟と楽園",          composer:"Lime",                     designer:"水無月",  diff:"MASTER",      rating:"14.4", stars:4.6, votes:203, hasViewer:true,  emoji:"🏯" },
+  { title:"FLY AWAY",           composer:"朱雀",                     designer:"CHAOS_SQ",diff:"ULTIMA",      rating:"15.2", stars:4.9, votes:501, hasViewer:true,  emoji:"🦅" },
+  { title:"Wind God Girl",      composer:"ZUN",                      designer:"東方組",  diff:"EXPERT",      rating:"13.0", stars:4.3, votes:89,  hasViewer:false, emoji:"🍃" },
+  { title:"ロストワンの号哭",    composer:"Neru feat.鏡音リン",       designer:"lentmiku",diff:"MASTER",      rating:"14.1", stars:4.5, votes:277, hasViewer:true,  emoji:"🎭" },
+  { title:"FREEDOM DiVE↓",     composer:"xi",                       designer:"APEX",    diff:"ULTIMA",      rating:"15.4", stars:5.0, votes:723, hasViewer:true,  emoji:"💎" },
+];
+const DIFF_CLASS = { MASTER:"diff-master", ULTIMA:"diff-ultima", EXPERT:"diff-expert", "WORLD'S END":"diff-we" };
+
+document.getElementById('chartGrid').innerHTML = CHARTS.map(c => `
+  <div class="chart-card">
+    <div class="card-cover">
+      <div class="card-cover-img">${c.emoji}</div>
+      <span class="card-diff-badge ${DIFF_CLASS[c.diff]}">${c.diff} ${c.rating}</span>
+      ${c.hasViewer ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
+      <div class="card-hover-actions">
+        ${c.hasViewer ? '<button class="card-hover-btn">🖼️ 展譜圖</button>' : ''}
+        <button class="card-hover-btn primary">📦 下載</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${c.title}</div>
+      <div class="card-composer">${c.composer}</div>
+      <div class="card-designer">Chart by <span>${c.designer}</span></div>
+      <div class="card-footer">
+        <div class="card-rating">
+          <span class="stars-sm">★</span>
+          <span class="rating-val">${c.stars}</span>
+          <span style="font-size:11px;color:var(--text-dimmer)">(${c.votes})</span>
+        </div>
+        <div class="card-badges"><span class="badge-zip">📦 ZIP</span></div>
+      </div>
+      <div class="card-stats">
+        <span class="stat">👁️ ${(c.votes*8+120).toLocaleString()}</span>
+        <span class="stat">⬇️ ${(c.votes*3+50).toLocaleString()}</span>
+      </div>
+    </div>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
