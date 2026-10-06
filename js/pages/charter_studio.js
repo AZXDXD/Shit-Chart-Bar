@@ -363,7 +363,8 @@ function renderChartItem(chart) {
         ${isPublished
           ? `<button class="action-btn primary" onclick="location.href='chart_detail.html?id=${chart.id}'">✏️ 查看</button>
              <button class="action-btn danger"  onclick="unpublishChart('${chart.id}')">⬇ 下架</button>`
-          : `<button class="action-btn primary" onclick="resumeEdit('${chart.id}')">✏️ 繼續編輯</button>
+          : `<button class="action-btn" onclick="location.href='chart_detail.html?id=${chart.id}'">查看詳情</button>
+             <button class="action-btn primary" onclick="resumeEdit('${chart.id}')">✏️ 繼續編輯</button>
              <button class="action-btn success" onclick="publishExisting('${chart.id}')">🚀 發布</button>
              <button class="action-btn danger"  onclick="removeChart('${chart.id}')">🗑️ 刪除</button>`
         }

@@ -11,6 +11,7 @@ import { renderChartCover, escapeHtml } from '../chart-cover.js';
 let currentPage   = 0;
 let isLoading     = false;
 let hasMore       = true;
+let pendingReset  = false;
 let currentFilter = {
   query:      '',
   difficulty: null,
@@ -22,8 +23,7 @@ let currentFilter = {
 // ── 初始化 ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();
-  await loadTags();
-  await loadCharts(true);
+  await Promise.all([loadTags(), loadCharts(true), loadFeatured()]);
 
   // 搜尋框 debounce
   const searchInput = document.getElementById('searchInput');
@@ -72,7 +72,7 @@ async function loadTags() {
 
 // ── 載入譜面 ─────────────────────────────────────────────────
 async function loadCharts(reset = false) {
-  if (isLoading) return;
+  if (isLoading) { if (reset) pendingReset = true; return; }
   isLoading = true;
 
   if (reset) {
@@ -111,6 +111,7 @@ async function loadCharts(reset = false) {
       document.getElementById('resultCount').textContent = '0 筆';
       document.getElementById('loadMoreBtn').style.display = 'none';
       isLoading = false;
+      if (pendingReset) { pendingReset=false; loadCharts(true); }
       return;
     }
 
@@ -127,10 +128,11 @@ async function loadCharts(reset = false) {
     }
   } catch(e) {
     console.error('loadCharts:', e);
-    if (reset) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#ef4444;">載入失敗：${e.message}</div>`;
+    if (reset) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#ef4444;">載入失敗：${escapeHtml(e.message)}</div>`;
   }
 
   isLoading = false;
+  if (pendingReset) { pendingReset=false; loadCharts(true); }
 }
 
 // ── 渲染卡片 HTML ─────────────────────────────────────────────
@@ -154,7 +156,7 @@ function renderCard(chart) {
         </span>
         ${chart.strip_url ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
         <div class="card-hover-actions">
-          ${chart.strip_url ? `<button class="card-hover-btn" onclick="event.stopPropagation();location.href='viewer.html?id=${chart.id}'">🖼️ 展譜</button>` : ''}
+          ${chart.strip_url ? `<button class="card-hover-btn" onclick="event.stopPropagation();location.href='chart_detail.html?id=${chart.id}'">🖼️ 展譜</button>` : ''}
           <button class="card-hover-btn primary"
             onclick="event.stopPropagation();handleDownload(event,'${chart.id}')">
             📦 下載
@@ -214,3 +216,25 @@ window.toggleTopicTag = function(btn) { btn.classList.toggle('active'); };
 
 // 暴露給 window
 window.loadCharts = loadCharts;
+
+// Every featured entry links to the same UUID detail page.
+let featuredSlide=0, featuredCount=0;
+window.goSlide=function(index) {
+  if (!featuredCount) return;
+  featuredSlide=(index+featuredCount)%featuredCount;
+  document.getElementById('carouselTrack').style.transform=`translateX(-${featuredSlide*(100/featuredCount)}%)`;
+  document.querySelectorAll('#carouselDots .dot').forEach((dot,i)=>dot.classList.toggle('active',i===featuredSlide));
+};
+window.prevSlide=()=>window.goSlide(featuredSlide-1);
+window.nextSlide=()=>window.goSlide(featuredSlide+1);
+async function loadFeatured() {
+  const track=document.getElementById('carouselTrack');
+  try {
+    const charts=await searchCharts({limit:3}); featuredCount=charts.length;
+    if(!featuredCount){track.parentElement.hidden=true;return;}
+    track.style.width=`${featuredCount*100}%`;
+    track.innerHTML=charts.map(chart=>`<div class="carousel-slide" style="width:${100/featuredCount}%"><div class="carousel-bg"></div><div class="carousel-overlay"></div><div class="carousel-content"><div><div class="carousel-badge">最新發布</div><div class="carousel-title">${escapeHtml(chart.title)}</div><div class="carousel-meta">${escapeHtml(chart.composer)} · ${escapeHtml(chart.charter_name)}</div><span class="difficulty-badge">${escapeHtml(chart.difficulty)} ${escapeHtml(chart.rating)}</span></div><div class="carousel-actions"><a class="btn-viewer" href="chart_detail.html?id=${encodeURIComponent(chart.id)}">查看譜面詳情</a><button class="btn-dl" onclick="handleDownload(event,'${chart.id}')">📦 下載遊玩包</button></div></div></div>`).join('');
+    document.getElementById('carouselDots').innerHTML=charts.map((_,index)=>`<button class="dot ${index===0?'active':''}" onclick="goSlide(${index})" aria-label="第 ${index+1} 張譜面"></button>`).join('');
+    if(featuredCount>1)setInterval(()=>window.nextSlide(),4500);
+  } catch {track.textContent='譜面載入失敗';}
+}

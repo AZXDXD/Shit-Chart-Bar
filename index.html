@@ -329,93 +329,7 @@
   </div>
 </div>
 
-<!-- ===== HERO CAROUSEL ===== -->
-<div class="carousel-wrap">
-  <button class="carousel-arrow arrow-prev" onclick="prevSlide()">‹</button>
-  <button class="carousel-arrow arrow-next" onclick="nextSlide()">›</button>
-
-  <div class="carousel-track" id="carouselTrack">
-    <!-- Slide 1 -->
-    <div class="carousel-slide">
-      <div class="carousel-bg" style="background:linear-gradient(135deg,#1a0a2e 0%,#2d0a0a 50%,#0a1a2e 100%);"></div>
-      <div class="carousel-overlay"></div>
-      <div class="carousel-content">
-        <div>
-          <div class="carousel-badge">🔥 本週熱門</div>
-          <div class="carousel-title">Sølips</div>
-          <div class="carousel-meta">Camellia &nbsp;·&nbsp; Chart by <span class="neon-orange">OSHIMA</span></div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="difficulty-badge diff-ultima">ULTIMA 15.4</span>
-            <div class="carousel-rating">
-              <span class="stars">★★★★★</span>
-              <span style="font-size:13px;color:var(--text-dim)">4.9 (312)</span>
-            </div>
-          </div>
-        </div>
-        <div class="carousel-actions">
-          <button class="btn-viewer">🖼️ 查看展譜圖</button>
-          <button class="btn-dl">📦 下載遊玩包</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Slide 2 -->
-    <div class="carousel-slide">
-      <div class="carousel-bg" style="background:linear-gradient(135deg,#0a1a2e 0%,#1a0a3e 50%,#0a2a1a 100%);"></div>
-      <div class="carousel-overlay"></div>
-      <div class="carousel-content">
-        <div>
-          <div class="carousel-badge">⭐ 編輯精選</div>
-          <div class="carousel-title">PUPA</div>
-          <div class="carousel-meta">の虫 &nbsp;·&nbsp; Chart by <span class="neon-purple">mizuki</span></div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="difficulty-badge diff-master">MASTER 14.8</span>
-            <div class="carousel-rating">
-              <span class="stars">★★★★★</span>
-              <span style="font-size:13px;color:var(--text-dim)">4.7 (208)</span>
-            </div>
-          </div>
-        </div>
-        <div class="carousel-actions">
-          <button class="btn-viewer">🖼️ 查看展譜圖</button>
-          <button class="btn-dl">📦 下載遊玩包</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Slide 3 -->
-    <div class="carousel-slide">
-      <div class="carousel-bg" style="background:linear-gradient(135deg,#1a1500 0%,#2a0a1a 50%,#001a2a 100%);"></div>
-      <div class="carousel-overlay"></div>
-      <div class="carousel-content">
-        <div>
-          <div class="carousel-badge">🆕 最新發布</div>
-          <div class="carousel-title">幽冥烏鴉</div>
-          <div class="carousel-meta">Team Shanghai Alice &nbsp;·&nbsp; Chart by <span class="neon-blue">東方組</span></div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="difficulty-badge diff-expert">EXPERT 13.9</span>
-            <div class="carousel-rating">
-              <span class="stars">★★★★☆</span>
-              <span style="font-size:13px;color:var(--text-dim)">4.3 (89)</span>
-            </div>
-          </div>
-        </div>
-        <div class="carousel-actions">
-          <button class="btn-viewer">🖼️ 查看展譜圖</button>
-          <button class="btn-dl">📦 下載遊玩包</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="carousel-dots">
-    <button class="dot active" onclick="goSlide(0)"></button>
-    <button class="dot" onclick="goSlide(1)"></button>
-    <button class="dot" onclick="goSlide(2)"></button>
-  </div>
-</div>
-
-<!-- ===== SEARCH & FILTER ===== -->
+<div class="carousel-wrap"><button class="carousel-arrow arrow-prev" onclick="prevSlide()">‹</button><button class="carousel-arrow arrow-next" onclick="nextSlide()">›</button><div class="carousel-track" id="carouselTrack"></div><div class="carousel-dots" id="carouselDots"></div></div>
 <div class="search-section">
   <div class="search-card">
     <div class="search-row">
@@ -507,20 +421,6 @@
 </footer>
 
 <script>
-// ---- Carousel ----
-let currentSlide = 0;
-const totalSlides = 3;
-const track = document.getElementById('carouselTrack');
-const dots = document.querySelectorAll('.dot');
-function goSlide(idx) {
-  currentSlide = ((idx % totalSlides) + totalSlides) % totalSlides;
-  track.style.transform = `translateX(-${currentSlide * (100 / totalSlides)}%)`;
-  dots.forEach((d, i) => d.classList.toggle('active', i === currentSlide));
-}
-function prevSlide() { goSlide(currentSlide - 1); }
-function nextSlide() { goSlide(currentSlide + 1); }
-setInterval(() => nextSlide(), 4500);
-
 // ---- Modal ----
 const modalOverlay = document.getElementById('modalOverlay');
 function openModal() { modalOverlay.classList.add('open'); }

@@ -1,0 +1,27 @@
+/* Scoped to chart strips; covers and avatars keep their existing rules. */
+.strip-viewer { width: 100%; max-width: 100%; min-width: 0; border: 1px solid var(--border, #2a2a44); border-radius: 12px; background: var(--bg2, #13131f); overflow: hidden; }
+.strip-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px; border-bottom: 1px solid var(--border, #2a2a44); }
+.strip-toolbar button, .strip-toolbar a { background: var(--bg3, #1a1a2e); border: 1px solid var(--border-b, #3a3a60); border-radius: 7px; padding: 8px 12px; color: var(--text, #eaeaf0); font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.strip-toolbar button:hover, .strip-toolbar a:hover { border-color: var(--orange-l, #ffa040); }
+.strip-toolbar button[aria-pressed="true"] { color: var(--orange-l, #ffa040); border-color: var(--orange, #ff6f00); }
+.strip-toolbar button:disabled { opacity: .4; cursor: default; }
+.strip-toolbar button:focus-visible, .strip-toolbar a:focus-visible, .strip-viewport:focus-visible { outline: 2px solid var(--orange-l, #ffa040); outline-offset: -2px; }
+.strip-zoom-label { min-width: 120px; color: var(--orange-l, #ffa040); font-size: 13px; font-variant-numeric: tabular-nums; }
+.strip-viewport { position: relative; width: 100%; min-width: 0; height: clamp(280px, 65vh, 600px); overflow: auto; overscroll-behavior: contain; touch-action: none; cursor: grab; user-select: none; background: #0a0a10; }
+.strip-viewport.is-dragging { cursor: grabbing; }
+.strip-viewport::-webkit-scrollbar { width: 12px; height: 12px; }
+.strip-viewport::-webkit-scrollbar-thumb { background: #686885; border: 2px solid #13131f; border-radius: 6px; }
+.strip-viewport::-webkit-scrollbar-corner { background: #13131f; }
+.strip-surface { position: relative; padding: 0; margin: 0; }
+.strip-viewport img.strip-image { display: block; max-width: none; max-height: none; padding: 0; margin: 0; border: 0; flex: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.strip-status { padding: 24px; color: var(--dim, #8888aa); }
+.strip-footer { display: flex; gap: 8px 20px; flex-wrap: wrap; padding: 10px 12px; font-size: 12px; color: var(--dim, #8888aa); border-top: 1px solid var(--border, #2a2a44); }
+.strip-viewer.is-expanded { position: fixed; inset: 0; z-index: 1000; width: 100%; max-width: none; height: 100vh; height: 100dvh; border: 0; border-radius: 0; display: flex; flex-direction: column; }
+.strip-viewer.is-expanded .strip-toolbar, .strip-viewer.is-expanded .strip-footer { flex: none; }
+.strip-viewer.is-expanded .strip-viewport { flex: 1; height: auto; min-height: 0; }
+@media (max-width: 640px) {
+  .strip-toolbar { gap: 6px; padding: 8px; }
+  .strip-toolbar button, .strip-toolbar a { padding: 9px 10px; }
+  .strip-zoom-label { min-width: 105px; }
+  .strip-footer { font-size: 11px; }
+}

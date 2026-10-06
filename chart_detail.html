@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calamity Fortune — 大份吧</title>
+  <title>譜面詳情 — 大份吧</title>
+  <link rel="stylesheet" href="css/chart-strip-viewer.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -141,57 +142,8 @@
     .tab-panel { display: none; padding: 24px 0; }
     .tab-panel.active { display: block; }
 
-    /* ── VIEWER TAB ── */
-    .viewer-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-    .viewer-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
-    .viewer-actions { display: flex; gap: 8px; }
-    .viewer-btn { display: flex; align-items: center; gap: 6px; background: var(--bg2); border: 1px solid var(--border-b); color: var(--dim); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .viewer-btn { display: flex; align-items: center; gap: 6px; background: var(--bg2); border: 1px solid var(--border-b); color: var(--dim); padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
     .viewer-btn:hover { color: var(--text); border-color: var(--orange-l); }
-
-    .viewer-container {
-      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r);
-      overflow: hidden; position: relative;
-      height: 480px; cursor: grab; user-select: none;
-      display: flex; align-items: flex-start; justify-content: center;
-    }
-    .viewer-container:active { cursor: grabbing; }
-    .viewer-inner {
-      width: 100%; height: 100%; overflow: hidden; position: relative;
-      display: flex; align-items: flex-start; justify-content: center;
-    }
-    .chart-img-wrap {
-      transform-origin: top center;
-      will-change: transform;
-      padding: 20px;
-    }
-    .chart-img-placeholder {
-      width: 280px;
-      background: linear-gradient(to bottom,
-        #2a1a3e 0%, #1e1030 8%, #2a0a1a 16%, #1a0a2e 24%,
-        #2a1a3e 32%, #1e1030 40%, #2a0a1a 48%, #1a0a2e 56%,
-        #2a1a3e 64%, #1e1030 72%, #2a0a1a 80%, #1a0a2e 88%, #2a1a3e 100%
-      );
-      border-radius: 8px; position: relative; overflow: hidden;
-    }
-    .chart-note-row { display: flex; justify-content: space-around; align-items: center; padding: 4px 12px; position: relative; }
-    .chart-note { width: 28px; height: 10px; border-radius: 3px; background: rgba(255,111,0,.7); border: 1px solid rgba(255,111,0,.9); }
-    .chart-note.air { background: rgba(61,228,255,.6); border-color: var(--blue); height: 8px; }
-    .chart-note.hold { width: 26px; height: 40px; border-radius: 4px; background: linear-gradient(to bottom,rgba(176,77,255,.8),rgba(176,77,255,.3)); border-color: var(--purple); }
-    .chart-note.slide { width: 60px; height: 8px; border-radius: 4px; background: linear-gradient(90deg,rgba(255,111,0,.5),rgba(176,77,255,.5)); }
-    .chart-note.flick { width: 28px; height: 12px; border-radius: 3px; background: rgba(255,61,170,.7); border: 1px solid #ff3daa; }
-    .chart-note.empty { background: transparent; border: none; }
-
-    .viewer-hint { position: absolute; bottom: 12px; right: 14px; font-size: 11px; color: var(--dimmer); pointer-events: none; }
-    .zoom-controls { position: absolute; bottom: 12px; left: 14px; display: flex; gap: 6px; }
-    .zoom-btn { width: 30px; height: 30px; background: rgba(13,13,20,.8); border: 1px solid var(--border-b); color: var(--dim); border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .2s; }
-    .zoom-btn:hover { color: var(--text); border-color: var(--orange-l); }
-
-    /* Fullscreen modal */
-    .fullscreen-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.95); }
-    .fullscreen-overlay.open { display: flex; align-items: center; justify-content: center; }
-    .fullscreen-close { position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,.1); border: 1px solid var(--border-b); color: var(--text); width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .fullscreen-close:hover { background: rgba(255,111,0,.2); }
-    .fullscreen-inner { max-width: 400px; width: 90%; max-height: 90vh; overflow-y: auto; }
 
     /* ── YOUTUBE TAB ── */
     .yt-wrap { border-radius: var(--r); overflow: hidden; background: #000; aspect-ratio: 16/9; position: relative; }
@@ -263,11 +215,6 @@
     .star-picker:hover .star-btn { color: var(--gold); }
     .star-picker .star-btn:hover ~ .star-btn { color: var(--dimmer); }
 
-    .compose-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .compose-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--orange); cursor: pointer; }
-    .compose-row label { font-size: 13px; color: var(--dim); cursor: pointer; }
-    .measure-input { width: 60px; background: var(--bg3); border: 1px solid var(--border-b); color: var(--text); padding: 4px 8px; border-radius: 6px; font-size: 13px; outline: none; display: none; }
-    .measure-input.show { display: inline-block; }
 
     .review-textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border-b); color: var(--text); padding: 12px 14px; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 90px; outline: none; font-family: inherit; transition: border-color .2s; }
     .review-textarea::placeholder { color: var(--dimmer); }
@@ -289,10 +236,11 @@
     .reviewer-name { font-size: 14px; font-weight: 700; }
     .review-date { font-size: 12px; color: var(--dimmer); }
     .review-stars { color: var(--gold); font-size: 13px; letter-spacing: 1px; }
-    .measure-tag { display: inline-flex; align-items: center; gap: 4px; background: rgba(176,77,255,.12); border: 1px solid rgba(176,77,255,.3); color: var(--purple); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-left: 6px; }
     .review-text { font-size: 14px; color: var(--dim); line-height: 1.7; }
     .review-helpful { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
     .helpful-btn { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--dimmer); padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .2s; }
+    .helpful-btn.active { color: var(--orange); border-color: var(--orange); background: rgba(255,140,0,.12); }
+    .helpful-btn:disabled { opacity: .5; cursor: wait; }
     .helpful-btn:hover { border-color: var(--border-b); color: var(--dim); }
 
     /* ── CHARTER BOX ── */
@@ -364,9 +312,11 @@
       .related-grid { grid-template-columns: repeat(2,1fr); }
       .breadcrumb { display: none; }
     }
-  </style>
+  [hidden]{display:none!important;} button:disabled{opacity:.5;cursor:wait;} .review-text{white-space:pre-wrap;overflow-wrap:anywhere;} img{max-width:100%;}
+</style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
+<script type="module" src="js/pages/chart-detail.js"></script>
 <script type="module" src="js/pages/chart-download.js"></script>
 </head>
 <body>
@@ -381,7 +331,7 @@
     <nav class="breadcrumb">
       <a href="index.html">探索譜面</a>
       <span>›</span>
-      <span style="color:var(--dim);">Calamity Fortune</span>
+      <span style="color:var(--dim);">譜面詳情</span>
     </nav>
   </div>
   <div class="hdr-right">
@@ -393,320 +343,50 @@
   </div>
 </header>
 
-<!-- ===== HERO ===== -->
-<section class="hero">
-  <div class="hero-blur"></div>
-  <div class="hero-overlay"></div>
-  <div class="hero-content">
-    <div class="cover-art">🎸</div>
-    <div class="hero-info">
-      <div class="hero-category">🎮 Original / Touhou Arrange</div>
-      <div class="hero-title-wrap">
-        <h1 class="hero-title">Calamity Fortune</h1>
-        <button class="btn-copy" id="copyTitle" onclick="copyTitle()">複製曲名</button>
-      </div>
-      <div class="hero-creators">
-        🎵 <strong>作曲家</strong>：<a href="#" class="creator-link">xi</a>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        🎼 <strong>譜面師</strong>：<a href="#charter" class="creator-link">七瀬 (Nanase)</a>
-      </div>
-      <div class="hero-badges">
-        <span class="diff-badge diff-master">MASTER 15.0</span>
-        <span class="meta-pill">🎵 BPM 220</span>
-        <span class="meta-pill">📂 Touhou Arrange</span>
-      </div>
-      <div class="hero-stats">
-        <div class="hero-stat">⬇️ &nbsp;<strong>3,842</strong> &nbsp;下載</div>
-        <div class="hero-stat">👁️ &nbsp;<strong>28,104</strong> &nbsp;瀏覽</div>
-        <div class="hero-stat">📅 &nbsp;<strong>2026-08-14</strong> &nbsp;發布</div>
-        <div class="hero-stat">🔄 &nbsp;<strong>2026-09-01</strong> &nbsp;更新</div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- ===== ACTION BAR ===== -->
-<div class="action-bar">
-  <button class="btn-dl" id="packageDownloadBtn">
-    <div>
-      <div style="font-size:16px;">📦 下載完整遊玩包</div>
-      <div class="btn-dl-meta">含 譜面 + 音檔 + 曲繪</div>
+<p id="detailStatus" role="status" style="padding:40px;">正在載入譜面…</p>
+<main id="chartDetail" hidden>
+<section class="hero"><div class="hero-blur"></div><div class="hero-overlay"></div><div class="hero-content">
+<div class="cover-art" id="coverArt">🎵</div><div class="hero-info">
+<div class="hero-category" id="category"></div><div class="hero-title-wrap"><h1 class="hero-title" id="chartTitle"></h1><button class="btn-copy" id="copyTitle">複製曲名</button></div>
+<div class="hero-creators" id="creators"></div><div class="hero-badges" id="metadata"></div><div class="hero-stats" id="chartStats"></div>
+</div></div></section>
+<div class="action-bar"><button class="btn-dl" id="packageDownloadBtn" disabled>📦 下載完整遊玩包</button><span id="packageSize"></span>
+<button class="btn-fav" id="favBtn" disabled><span id="favText">收藏譜面</span></button><button class="btn-share" id="shareBtn">🔗 分享此頁</button></div>
+<p id="actionMessage" role="status" style="padding:12px 40px;"></p>
+<div class="tabs-wrap"><div class="section-hd">譜面描述</div><p id="description" style="white-space:pre-wrap;overflow-wrap:anywhere;"></p>
+<div class="tab-list"><button class="tab-btn active" onclick="switchTab('viewer',this)">🖼️ 展譜圖</button><button class="tab-btn" onclick="switchTab('youtube',this)">▶️ 示範影片</button></div>
+<div class="tab-panel active" id="tab-viewer">
+  <section class="strip-viewer" id="stripViewer" role="region" aria-label="展譜圖檢視器">
+    <div class="strip-toolbar" aria-label="展譜圖控制列">
+      <button type="button" data-strip-action="out" aria-label="縮小展譜圖" disabled>−</button>
+      <output class="strip-zoom-label" aria-label="目前展譜圖倍率">—</output>
+      <button type="button" data-strip-action="in" aria-label="放大展譜圖" disabled>＋</button>
+      <button type="button" data-strip-action="original" aria-pressed="false" disabled>100%</button>
+      <button type="button" data-strip-action="fit" aria-pressed="false" disabled>Fit Height</button>
+      <button type="button" data-strip-action="reset" disabled>↺ Reset</button>
+      <button type="button" data-strip-action="fullscreen" aria-expanded="false" disabled>⛶ 全螢幕查看</button>
+      <a id="stripDownload" hidden download>下載原圖</a>
     </div>
-  </button>
-  <button class="btn-fav" id="favBtn" onclick="toggleFav()">
-    <span id="favStar">⭐</span> <span id="favText">收藏譜面</span>
-  </button>
-  <button class="btn-share" id="shareBtn" onclick="copyLink()">
-    🔗 <span id="shareText">分享此頁</span>
-  </button>
+    <div class="strip-viewport" id="viewerContainer" tabindex="0" aria-label="可捲動的展譜圖" aria-describedby="stripHint">
+      <div class="strip-status" role="status">正在載入展譜圖…</div>
+      <div class="strip-surface" hidden><img class="strip-image" alt="展譜圖" draggable="false" decoding="async"></div>
+    </div>
+    <div class="strip-footer"><span class="strip-dimensions"></span><span id="stripHint">拖曳／捲動查看 · Ctrl + 滾輪縮放 · 手機雙指縮放 · 全螢幕按 ESC 離開</span></div>
+  </section>
 </div>
-
-<!-- ===== TABS ===== -->
-<div class="tabs-wrap">
-  <div class="tab-list">
-    <button class="tab-btn active" onclick="switchTab('viewer',this)">🖼️ 展譜圖 Viewer</button>
-    <button class="tab-btn" onclick="switchTab('youtube',this)">▶️ 示範影片</button>
-  </div>
-
-  <!-- Tab: Viewer -->
-  <div class="tab-panel active" id="tab-viewer">
-    <div class="viewer-toolbar">
-      <div class="viewer-title">📊 縱向展譜圖 &nbsp;<span style="font-size:12px;color:var(--dimmer);font-weight:400;">滾輪縮放・拖曳平移</span></div>
-      <div class="viewer-actions">
-        <button class="viewer-btn" onclick="openFullscreen()">🔍 全螢幕檢視</button>
-        <button class="viewer-btn">📥 下載高清原圖</button>
-      </div>
-    </div>
-    <div class="viewer-container" id="viewerContainer">
-      <div class="viewer-inner">
-        <div class="chart-img-wrap" id="chartImgWrap">
-          <div class="chart-img-placeholder" id="chartPlaceholder">
-            <!-- Generated note rows representing a chart strip -->
-          </div>
-        </div>
-      </div>
-      <div class="zoom-controls">
-        <button class="zoom-btn" onclick="zoomIn()">+</button>
-        <button class="zoom-btn" onclick="zoomOut()">−</button>
-        <button class="zoom-btn" onclick="resetZoom()" title="重置">↺</button>
-      </div>
-      <div class="viewer-hint">滾輪縮放 / 拖曳平移</div>
-    </div>
-  </div>
-
-  <!-- Tab: YouTube -->
-  <div class="tab-panel" id="tab-youtube">
-    <div class="yt-wrap">
-      <div class="yt-placeholder" onclick="this.innerHTML='<iframe width=\'100%\' height=\'100%\' src=\'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1\' frameborder=\'0\' allow=\'autoplay; encrypted-media\' allowfullscreen></iframe>'">
-        <div class="yt-play">▶</div>
-        <div class="yt-meta">
-          <strong>Calamity Fortune MASTER 15.0 — 手元示範</strong>
-          <span>by 七瀬 · 點擊播放</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Fullscreen Modal -->
-<div class="fullscreen-overlay" id="fullscreenOverlay">
-  <button class="fullscreen-close" onclick="closeFullscreen()">✕</button>
-  <div class="fullscreen-inner" id="fullscreenInner"></div>
-</div>
-
-<!-- ===== REVIEWS ===== -->
-<div class="review-section">
-
-  <!-- Rating Overview -->
-  <div class="section-hd">評分總覽</div>
-  <div class="rating-overview">
-    <div class="rating-big">
-      <div class="rating-score">4.8</div>
-      <div class="rating-stars">★★★★★</div>
-      <div class="rating-count">共 412 人評分</div>
-    </div>
-    <div class="rating-bars">
-      <div class="bar-row"><span class="bar-label">★5</span><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><span class="bar-count">297</span></div>
-      <div class="bar-row"><span class="bar-label">★4</span><div class="bar-track"><div class="bar-fill" style="width:18%"></div></div><span class="bar-count">74</span></div>
-      <div class="bar-row"><span class="bar-label">★3</span><div class="bar-track"><div class="bar-fill" style="width:6%"></div></div><span class="bar-count">25</span></div>
-      <div class="bar-row"><span class="bar-label">★2</span><div class="bar-track"><div class="bar-fill" style="width:2%"></div></div><span class="bar-count">9</span></div>
-      <div class="bar-row"><span class="bar-label">★1</span><div class="bar-track"><div class="bar-fill" style="width:1%"></div></div><span class="bar-count">7</span></div>
-    </div>
-  </div>
-
-  <!-- Community Difficulty -->
-  <div class="section-hd">體感難度</div>
-  <div class="cd-card">
-    <div class="cd-row">
-      <span class="cd-label">🎼 創作者定數</span>
-      <span class="cd-val" style="color:var(--purple);">15.0</span>
-      <div class="cd-diff-bar" style="max-width:200px;">
-        <div class="cd-fill creator" style="width:90%;"></div>
-      </div>
-    </div>
-    <div class="cd-row">
-      <span class="cd-label">👥 社群均值</span>
-      <span class="cd-val" style="color:var(--orange-l);">15.2</span>
-      <div class="cd-diff-bar" style="max-width:200px;">
-        <div class="cd-fill community" style="width:94%;"></div>
-      </div>
-    </div>
-    <!-- Login gate for voting -->
-    <div class="cd-vote-wrap">
-      <div class="cd-vote-label">📊 填入你的體感難度（需登入）</div>
-      <div class="cd-vote-input">
-        <input type="number" min="1" max="16" step="0.1" placeholder="如 15.3" id="cdVoteInput" />
-        <button class="btn-vote" onclick="requireLogin(cdVoteInput)">送出投票</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Tags -->
-  <div class="section-hd">玩家標籤</div>
-  <div class="quick-tags-wrap">
-    <div style="font-size:13px;color:var(--dim);">點擊可投票 +1（需登入）</div>
-    <div class="quick-tags">
-      <button class="qtag active" onclick="voteTag(this)">
-        神譜 <span class="qtag-count" id="tcount-0">24</span>
-      </button>
-      <button class="qtag" onclick="voteTag(this)">
-        手速考驗 <span class="qtag-count" id="tcount-1">18</span>
-      </button>
-      <button class="qtag" onclick="voteTag(this)">
-        配置精妙 <span class="qtag-count" id="tcount-2">15</span>
-      </button>
-      <button class="qtag" onclick="voteTag(this)">
-        音樂連動性高 <span class="qtag-count" id="tcount-3">12</span>
-      </button>
-      <button class="qtag danger" onclick="voteTag(this)">
-        爆手風險 <span class="qtag-count" id="tcount-4">5</span>
-      </button>
-      <button class="qtag danger" onclick="voteTag(this)">
-        判定嚴格 <span class="qtag-count" id="tcount-5">3</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Review Write -->
-  <div class="section-hd">玩家評論</div>
-
-  <!-- Guest lock (toggle via JS) -->
-  <div class="guest-lock" id="guestLock">
-    <p>登入後即可給予星等評分、留下評語，並標註具體小節討論</p>
-    <button class="btn-login-cta" onclick="openModal()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" style="vertical-align:middle;margin-right:6px;"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-      以 Discord 登入後評論
-    </button>
-  </div>
-
-  <!-- Review form (hidden for guests in production) -->
-  <div class="review-compose" id="reviewCompose" style="opacity:.35;pointer-events:none;">
-    <div class="review-compose-header">
-      <span style="font-size:14px;font-weight:700;">寫下你的評論</span>
-      <div class="star-picker" id="starPicker">
-        <button class="star-btn" onclick="setStar(1)">★</button>
-        <button class="star-btn" onclick="setStar(2)">★</button>
-        <button class="star-btn" onclick="setStar(3)">★</button>
-        <button class="star-btn" onclick="setStar(4)">★</button>
-        <button class="star-btn" onclick="setStar(5)">★</button>
-      </div>
-    </div>
-    <div class="compose-row">
-      <input type="checkbox" id="measureCheck" onchange="toggleMeasure()">
-      <label for="measureCheck">標註小節</label>
-      <input class="measure-input" type="number" min="1" placeholder="小節數" id="measureNum">
-    </div>
-    <textarea class="review-textarea" placeholder="分享你的遊玩體驗、對譜面的看法，或針對某段配置的具體討論…"></textarea>
-    <div class="review-submit-row">
-      <button class="btn-review-submit">發表評論</button>
-    </div>
-  </div>
-
-  <!-- Existing reviews -->
-  <div id="reviewList">
-    <div class="review-card">
-      <div class="review-meta">
-        <div class="reviewer-avatar">N</div>
-        <div>
-          <div class="reviewer-name">NightSky_CHU <span class="review-stars">★★★★★</span></div>
-          <div class="review-date">2026-09-10</div>
-        </div>
-      </div>
-      <div class="review-text">七瀬的配置一如既往地精準，第三段的 Hold + Air 組合完美對應了副歌的高潮。這首在 MASTER 15.0 裡算是體感偏高，手速段落密度很大，建議 14.5+ 的玩家再來挑戰。整體神譜無誤！</div>
-      <div class="review-helpful"><span style="font-size:12px;color:var(--dimmer);">有幫助嗎？</span><button class="helpful-btn">👍 42</button><button class="helpful-btn">👎 2</button></div>
-    </div>
-
-    <div class="review-card">
-      <div class="review-meta">
-        <div class="reviewer-avatar" style="background:linear-gradient(135deg,var(--purple),var(--blue));">A</div>
-        <div>
-          <div class="reviewer-name">Aozora_PLAYER <span class="review-stars">★★★★☆</span> <span class="measure-tag">📍 第 32 小節</span></div>
-          <div class="review-date">2026-09-05</div>
-        </div>
-      </div>
-      <div class="review-text">整體很好玩，但第 32 小節的三連 Flick 在快速 BPM 下排列有點過密，第一次打很容易因為位置判斷來不及而爆手。建議創作者可以考慮微調一下間距，其他部分都非常棒！</div>
-      <div class="review-helpful"><span style="font-size:12px;color:var(--dimmer);">有幫助嗎？</span><button class="helpful-btn">👍 28</button><button class="helpful-btn">👎 1</button></div>
-    </div>
-
-    <div class="review-card">
-      <div class="review-meta">
-        <div class="reviewer-avatar" style="background:linear-gradient(135deg,#22c55e,#16a34a);">M</div>
-        <div>
-          <div class="reviewer-name">MikuMiku_Master <span class="review-stars">★★★★★</span></div>
-          <div class="review-date">2026-08-20</div>
-        </div>
-      </div>
-      <div class="review-text">配合音樂的 Air 設計讓我感動，尤其間奏段落那段純 Air + Slide 的編排，真的是把曲子的飄逸感完全轉化成手感了。下載遊玩包的音質也很好，打包很用心。</div>
-      <div class="review-helpful"><span style="font-size:12px;color:var(--dimmer);">有幫助嗎？</span><button class="helpful-btn">👍 35</button><button class="helpful-btn">👎 0</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== CHARTER ===== -->
-<div class="charter-section" id="charter">
-  <div class="section-hd">創作者資訊</div>
-  <div class="charter-card">
-    <div class="charter-avatar">七</div>
-    <div class="charter-info">
-      <div class="charter-name-row">
-        <span class="charter-name">七瀬 (Nanase)</span>
-        <span class="verified-badge">✓ 認證創作者</span>
-      </div>
-      <div class="charter-stats">
-        <div class="charter-stat"><strong>23</strong><span>自製譜</span></div>
-        <div class="charter-stat"><strong>48.2K</strong><span>總下載</span></div>
-        <div class="charter-stat"><strong>4.7</strong><span>平均評分</span></div>
-      </div>
-      <div class="charter-bio">專注於東方 / xi 系列高難度自製譜，擅長手速段落設計與音符節奏連動。歡迎大家反饋遊玩體驗！</div>
-      <div class="charter-links">
-        <a href="#" class="social-link">▶ YouTube</a>
-        <a href="#" class="social-link">𝕏 Twitter / X</a>
-        <a href="#" class="social-link">💬 Discord</a>
-      </div>
-      <button class="btn-all-charts">查看七瀬的所有自製譜 →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== RELATED ===== -->
-<div class="related-section">
-  <div class="section-hd">你可能也喜歡</div>
-  <div class="related-grid">
-    <div class="rel-card">
-      <div class="rel-cover">🌙<span class="rel-diff-badge diff-ultima">ULTIMA 14.9</span></div>
-      <div class="rel-body">
-        <div class="rel-title">Grievous Lady</div>
-        <div class="rel-designer">Chart by あまね</div>
-        <div class="rel-foot"><span class="rel-stars">★★★★★</span><span class="rel-rating">4.8</span></div>
-      </div>
-    </div>
-    <div class="rel-card">
-      <div class="rel-cover">💎<span class="rel-diff-badge diff-ultima">ULTIMA 15.4</span></div>
-      <div class="rel-body">
-        <div class="rel-title">FREEDOM DiVE↓</div>
-        <div class="rel-designer">Chart by APEX</div>
-        <div class="rel-foot"><span class="rel-stars">★★★★★</span><span class="rel-rating">5.0</span></div>
-      </div>
-    </div>
-    <div class="rel-card">
-      <div class="rel-cover">🏯<span class="rel-diff-badge diff-master">MASTER 14.4</span></div>
-      <div class="rel-body">
-        <div class="rel-title">廃墟と楽園</div>
-        <div class="rel-designer">Chart by 水無月</div>
-        <div class="rel-foot"><span class="rel-stars">★★★★☆</span><span class="rel-rating">4.6</span></div>
-      </div>
-    </div>
-    <div class="rel-card">
-      <div class="rel-cover">🎸<span class="rel-diff-badge diff-master">MASTER 15.1</span></div>
-      <div class="rel-body">
-        <div class="rel-title">Arcaea</div>
-        <div class="rel-designer">Chart by 七瀬</div>
-        <div class="rel-foot"><span class="rel-stars">★★★★★</span><span class="rel-rating">4.7</span></div>
-      </div>
-    </div>
-  </div>
-</div>
-
+<div class="tab-panel" id="tab-youtube"><div class="yt-wrap" id="video">未提供示範影片</div></div></div>
+<div class="review-section"><div class="section-hd">五星評論總覽</div><div class="rating-overview"><div class="rating-big"><div class="rating-score" id="reviewAverage">—</div><div class="rating-count" id="reviewCount"></div></div><div class="rating-bars" id="ratingBars"></div></div>
+<div class="section-hd">體感難度</div><div class="cd-card"><div class="cd-row">🎼 創作者定數 <strong id="creatorRating"></strong></div><div class="cd-row">👥 社群平均 <strong id="communityAverage">—</strong><span id="communityCount"></span></div>
+<div class="cd-vote-label" id="myRating">登入後可投票</div><div class="cd-vote-input"><input type="number" min="1" max="16" step="0.1" id="cdVoteInput" aria-label="體感難度"><button class="btn-vote" id="communitySubmit">送出投票</button></div></div>
+<div class="section-hd">玩家標籤</div><div class="quick-tags-wrap"><p>點擊投票（需登入）</p><div class="quick-tags" id="chartTags"></div></div>
+<div class="section-hd">玩家評論</div><div class="guest-lock" id="guestLock"><p>登入後可以評分與評論</p><button class="btn-login-cta" onclick="openLoginModal()">登入</button></div>
+<form class="review-compose" id="reviewCompose" hidden><div class="review-compose-header">你的評論（每人一則，可修改）<div class="star-picker" id="starPicker"><button type="button" class="star-btn" data-star="1" aria-label="1 星">★</button><button type="button" class="star-btn" data-star="2" aria-label="2 星">★</button><button type="button" class="star-btn" data-star="3" aria-label="3 星">★</button><button type="button" class="star-btn" data-star="4" aria-label="4 星">★</button><button type="button" class="star-btn" data-star="5" aria-label="5 星">★</button></div></div>
+<textarea class="review-textarea" id="reviewBody" required maxlength="10000" aria-label="評論內容"></textarea><div class="review-submit-row"><button class="btn-review-submit" id="reviewSubmit">發表／更新評論</button></div></form>
+<div id="reviewList"></div><button class="viewer-btn" id="moreReviews" hidden>載入更多評論</button></div>
+<div class="charter-section" id="charter"><div class="section-hd">創作者資訊</div><div class="charter-card"><div class="charter-avatar" id="creatorAvatar"></div><div class="charter-info"><div class="charter-name-row"><span class="charter-name" id="creatorName"></span><span class="verified-badge" id="creatorVerified" hidden>✓ 認證創作者</span></div><div class="charter-bio" id="creatorBio"></div><div class="charter-links" id="creatorLinks"></div></div></div></div>
+<div class="related-section"><div class="section-hd">其他譜面</div><div class="related-grid" id="relatedCharts"></div></div>
+</main>
 <!-- ===== FOOTER ===== -->
 <footer>
   <div class="footer-inner">
@@ -744,41 +424,9 @@
 </div>
 
 <script>
-// ── Modal ──
-const modalOverlay = document.getElementById('modalOverlay');
-function openModal() { modalOverlay.classList.add('open'); }
-function closeModal() { modalOverlay.classList.remove('open'); }
-function handleOverlayClick(e) { if (e.target === modalOverlay) closeModal(); }
-
-// ── Login gate ──
-function requireLogin(el) { openModal(); }
-
-// ── Copy title ──
-function copyTitle() {
-  navigator.clipboard.writeText('Calamity Fortune').catch(()=>{});
-  const btn = document.getElementById('copyTitle');
-  btn.textContent = '✓ 已複製'; btn.classList.add('copied');
-  setTimeout(() => { btn.textContent = '複製曲名'; btn.classList.remove('copied'); }, 2000);
-}
-
-// ── Share ──
-function copyLink() {
-  navigator.clipboard.writeText(location.href).catch(()=>{});
-  const btn = document.getElementById('shareBtn');
-  const txt = document.getElementById('shareText');
-  txt.textContent = '✓ 連結已複製'; btn.classList.add('copied');
-  setTimeout(() => { txt.textContent = '分享此頁'; btn.classList.remove('copied'); }, 2000);
-}
-
-// ── Fav ──
-let favActive = false;
-function toggleFav() {
-  favActive = !favActive;
-  document.getElementById('favBtn').classList.toggle('active', favActive);
-  document.getElementById('favStar').textContent = favActive ? '💛' : '⭐';
-  document.getElementById('favText').textContent = favActive ? '已收藏' : '收藏譜面';
-}
-
+function openModal(){openLoginModal();}
+function closeModal(){closeLoginModal();}
+function handleOverlayClick(e){if(e.target.id==='modalOverlay')closeModal();}
 // ── Tabs ──
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -787,91 +435,6 @@ function switchTab(id, btn) {
   btn.classList.add('active');
 }
 
-// ── Viewer zoom & drag ──
-let scale = 1, posX = 0, posY = 0, isDragging = false, startX, startY;
-const wrap = document.getElementById('chartImgWrap');
-
-function applyTransform() {
-  wrap.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-}
-function zoomIn()   { scale = Math.min(scale + 0.25, 4); applyTransform(); }
-function zoomOut()  { scale = Math.max(scale - 0.25, 0.5); applyTransform(); }
-function resetZoom(){ scale = 1; posX = 0; posY = 0; applyTransform(); }
-
-const container = document.getElementById('viewerContainer');
-container.addEventListener('wheel', e => {
-  e.preventDefault();
-  scale = Math.max(0.5, Math.min(4, scale - e.deltaY * 0.001));
-  applyTransform();
-}, { passive: false });
-
-container.addEventListener('mousedown', e => { isDragging = true; startX = e.clientX - posX; startY = e.clientY - posY; });
-window.addEventListener('mousemove', e => { if (!isDragging) return; posX = e.clientX - startX; posY = e.clientY - startY; applyTransform(); });
-window.addEventListener('mouseup', () => isDragging = false);
-
-// Touch support
-container.addEventListener('touchstart', e => { const t = e.touches[0]; isDragging = true; startX = t.clientX - posX; startY = t.clientY - posY; }, { passive: true });
-container.addEventListener('touchmove', e => { if (!isDragging) return; const t = e.touches[0]; posX = t.clientX - startX; posY = t.clientY - startY; applyTransform(); e.preventDefault(); }, { passive: false });
-container.addEventListener('touchend', () => isDragging = false);
-
-// ── Generate chart strip ──
-(function generateChart() {
-  const ph = document.getElementById('chartPlaceholder');
-  const noteTypes = [
-    ['chart-note','chart-note empty','chart-note air','chart-note empty'],
-    ['chart-note empty','chart-note','chart-note','chart-note empty'],
-    ['chart-note empty','chart-note air','chart-note empty','chart-note air'],
-    ['chart-note slide','chart-note empty','chart-note empty','chart-note empty'],
-    ['chart-note','chart-note flick','chart-note empty','chart-note'],
-    ['chart-note hold','chart-note empty','chart-note empty','chart-note hold'],
-    ['chart-note empty','chart-note','chart-note air','chart-note empty'],
-  ];
-  const totalRows = 60;
-  let html = '';
-  for (let i = 0; i < totalRows; i++) {
-    const pattern = noteTypes[i % noteTypes.length];
-    html += '<div class="chart-note-row">';
-    pattern.forEach(c => { html += `<div class="${c}"></div>`; });
-    html += '</div>';
-    if (i % 8 === 7) html += '<div style="height:2px;background:rgba(255,255,255,.08);margin:4px 12px;"></div>';
-  }
-  ph.innerHTML = html;
-})();
-
-// ── Fullscreen ──
-function openFullscreen() {
-  const inner = document.getElementById('fullscreenInner');
-  inner.innerHTML = document.getElementById('chartPlaceholder').outerHTML;
-  document.getElementById('fullscreenOverlay').classList.add('open');
-}
-function closeFullscreen() {
-  document.getElementById('fullscreenOverlay').classList.remove('open');
-}
-
-// ── Star picker ──
-let selectedStar = 0;
-function setStar(n) {
-  selectedStar = n;
-  document.querySelectorAll('.star-btn').forEach((b,i) => b.classList.toggle('lit', i < n));
-}
-
-// ── Measure toggle ──
-function toggleMeasure() {
-  const el = document.getElementById('measureNum');
-  el.classList.toggle('show', document.getElementById('measureCheck').checked);
-}
-
-// ── Quick tag vote ──
-function voteTag(btn) {
-  const cntEl = btn.querySelector('.qtag-count');
-  if (btn.classList.contains('active')) {
-    btn.classList.remove('active');
-    cntEl.textContent = parseInt(cntEl.textContent) - 1;
-  } else {
-    btn.classList.add('active');
-    cntEl.textContent = parseInt(cntEl.textContent) + 1;
-  }
-}
 </script>
 </body>
 </html>

@@ -160,5 +160,9 @@ export async function downloadChart(chartOrId) {
   const { chart, url } = await getChartDownload(chartOrId);
   triggerDownload(url, `${chart.title} [${chart.difficulty} ${chart.rating}].zip`);
   const { recordDownload } = await import('./api.js');
-  await recordDownload(chart.id).catch(() => {});
+  await recordDownload(chart.id).catch(error => {
+    console.warn('Download statistics:', error.message);
+    window.dispatchEvent(new CustomEvent('chartDownloadStatsFailed'));
+  });
+  window.dispatchEvent(new CustomEvent('chartDownloaded', { detail: { chartId: chart.id } }));
 }

@@ -39,7 +39,7 @@ export async function searchCharts({
 /**
  * 取得單一譜面詳情
  */
-export async function getChart(chartId) {
+export async function getChart(chartId, { countView = true } = {}) {
   const { data, error } = await supabase
     .from('charts')
     .select(`
@@ -52,8 +52,12 @@ export async function getChart(chartId) {
     .single();
   if (error) throw error;
 
-  // 增加瀏覽數（fire and forget）
-  supabase.rpc('increment_view', { chart_uuid: chartId }).then(() => {});
+  // Use only the new unique-view RPC; never fall back to the legacy counter.
+  if (countView && currentUser && data.status === 'published') {
+    const { data: count, error: viewError } = await supabase.rpc('record_chart_view', { chart_uuid: chartId });
+    if (!viewError) data.view_count = count;
+    else data.view_notice = '帳號瀏覽記錄未完成：請確認已執行新的 migration，或稍後重試。';
+  }
 
   return enrichChart(data);
 }
@@ -168,12 +172,12 @@ export async function getReviews(chartId, { limit = 20, page = 0 } = {}) {
   const { data, error } = await supabase
     .from('reviews')
     .select(`
-      *,
+      id, chart_id, user_id, rating, body, created_at, updated_at,
       profiles:user_id (id, username, charter_name, avatar_url)
     `)
     .eq('chart_id', chartId)
-    .order('helpful_count', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(page * limit, (page + 1) * limit - 1);
   if (error) throw error;
   return data;
@@ -196,7 +200,7 @@ export async function getMyReview(chartId) {
 /**
  * 新增或更新評論（UPSERT）
  */
-export async function upsertReview(chartId, { rating, body, measureNumber }) {
+export async function upsertReview(chartId, { rating, body }) {
   if (!currentUser) throw new Error('請先登入');
   const { data, error } = await supabase
     .from('reviews')
@@ -205,7 +209,6 @@ export async function upsertReview(chartId, { rating, body, measureNumber }) {
       user_id:        currentUser.id,
       rating,
       body,
-      measure_number: measureNumber || null,
     }, { onConflict: 'chart_id,user_id' })
     .select()
     .single();
@@ -217,6 +220,7 @@ export async function upsertReview(chartId, { rating, body, measureNumber }) {
  * 刪除評論
  */
 export async function deleteReview(reviewId) {
+  if (!currentUser) throw new Error('請先登入');
   const { error } = await supabase
     .from('reviews')
     .delete()
@@ -226,33 +230,23 @@ export async function deleteReview(reviewId) {
 }
 
 /**
- * 評論有幫助 +1 / 取消
+ * 讚／倒讚切換，由 RPC 取得 auth.uid() 並回傳最新統計。
  */
-export async function toggleReviewHelpful(reviewId) {
+export async function toggleReviewReaction(reviewId, reaction) {
   if (!currentUser) throw new Error('請先登入');
+  if (!['like', 'dislike'].includes(reaction)) throw new Error('無效的評論反應');
+  const { data, error } = await supabase.rpc('toggle_review_reaction', {
+    review_uuid: reviewId, requested_reaction: reaction,
+  });
+  if (error) throw error;
+  return data[0];
+}
 
-  const { data: existing } = await supabase
-    .from('review_helpful')
-    .select('review_id')
-    .eq('review_id', reviewId)
-    .eq('user_id', currentUser.id)
-    .single();
-
-  if (existing) {
-    // 取消
-    await supabase.from('review_helpful')
-      .delete().eq('review_id', reviewId).eq('user_id', currentUser.id);
-    await supabase.from('reviews')
-      .update({ helpful_count: supabase.sql`helpful_count - 1` }).eq('id', reviewId);
-    return false;
-  } else {
-    // +1
-    await supabase.from('review_helpful')
-      .insert({ review_id: reviewId, user_id: currentUser.id });
-    await supabase.from('reviews')
-      .update({ helpful_count: supabase.sql`helpful_count + 1` }).eq('id', reviewId);
-    return true;
-  }
+export async function getReviewReactions(reviewIds) {
+  if (!reviewIds.length) return [];
+  const { data, error } = await supabase.rpc('get_review_reactions', { review_ids: reviewIds });
+  if (error) throw error;
+  return data;
 }
 
 // ╔══════════════════════════════════════════════════════════╗
@@ -261,12 +255,13 @@ export async function toggleReviewHelpful(reviewId) {
 
 export async function isFavorited(chartId) {
   if (!currentUser) return false;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('favorites')
     .select('chart_id')
     .eq('chart_id', chartId)
     .eq('user_id', currentUser.id)
-    .single();
+    .maybeSingle();
+  if (error) throw error;
   return !!data;
 }
 
@@ -274,12 +269,14 @@ export async function toggleFavorite(chartId) {
   if (!currentUser) throw new Error('請先登入');
   const faved = await isFavorited(chartId);
   if (faved) {
-    await supabase.from('favorites')
+    const { error } = await supabase.from('favorites')
       .delete().eq('chart_id', chartId).eq('user_id', currentUser.id);
+    if (error) throw error;
     return false;
   } else {
-    await supabase.from('favorites')
+    const { error } = await supabase.from('favorites')
       .insert({ chart_id: chartId, user_id: currentUser.id });
+    if (error) throw error;
     return true;
   }
 }
@@ -328,22 +325,25 @@ export async function getChartTagsWithVotes(chartId) {
 export async function toggleTagVote(chartId, tagId) {
   if (!currentUser) throw new Error('請先登入');
 
-  const { data: existing } = await supabase
+  const { data: existing, error } = await supabase
     .from('chart_tag_votes')
     .select('tag_id')
     .eq('chart_id', chartId)
     .eq('tag_id', tagId)
     .eq('user_id', currentUser.id)
-    .single();
+    .maybeSingle();
+  if (error) throw error;
 
   if (existing) {
-    await supabase.from('chart_tag_votes')
+    const { error } = await supabase.from('chart_tag_votes')
       .delete()
       .eq('chart_id', chartId).eq('tag_id', tagId).eq('user_id', currentUser.id);
+    if (error) throw error;
     return false;
   } else {
-    await supabase.from('chart_tag_votes')
+    const { error } = await supabase.from('chart_tag_votes')
       .insert({ chart_id: chartId, tag_id: tagId, user_id: currentUser.id });
+    if (error) throw error;
     return true;
   }
 }
@@ -386,10 +386,11 @@ export async function getMyCommunityRating(chartId) {
  * 記錄下載（呼叫後再提供下載 URL）
  */
 export async function recordDownload(chartId) {
-  await supabase.from('downloads').insert({
+  const { error } = await supabase.from('downloads').insert({
     chart_id: chartId,
     user_id:  currentUser?.id ?? null,
   });
+  if (error) throw error;
 }
 
 // ╔══════════════════════════════════════════════════════════╗
