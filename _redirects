@@ -1,0 +1,10 @@
+# 大份吧 — Cloudflare Pages 部署設定
+
+[build]
+  command = ""          # 靜態網站，無需 build 步驟
+  publish = "."         # 根目錄即部署目錄
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
