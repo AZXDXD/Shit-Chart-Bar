@@ -126,6 +126,13 @@ export async function logout() {
     showAuthError('登出失敗：' + error.message);
   }
 }
+export function getProviderAvatar(user = currentUser) {
+  const provider = user?.app_metadata?.provider;
+  const identity = user?.identities?.find(i => i.provider === provider && ['google', 'discord'].includes(i.provider));
+  const metadata = identity?.identity_data || user?.user_metadata || {};
+  const url = metadata.avatar_url || metadata.picture || '';
+  return /^https?:\/\//i.test(url) ? url : '';
+}
 export function getUserDisplayData(user = currentUser, profile = currentProfile) {
   const metadata = user?.user_metadata ?? {};
   const issuer = metadata.iss || '';
@@ -136,7 +143,7 @@ export function getUserDisplayData(user = currentUser, profile = currentProfile)
     email: user?.email || metadata.email || '',
     provider,
     name: profile?.charter_name || profile?.username || (provider === 'discord' ? discordName : metadata.full_name || metadata.name || metadata.user_name || metadata.preferred_username || metadata.username) || metadata.email || user?.email || '使用者',
-    avatar: profile?.avatar_url || metadata.avatar_url || metadata.picture || '',
+    avatar: profile?.avatar_url || getProviderAvatar(user),
   };
 }
 function debugUser(user, event) {

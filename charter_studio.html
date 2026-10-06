@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>創作者中心 — 大份吧</title>
+  <title>我的帳號 — 大份吧</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -276,7 +276,7 @@
     <nav class="breadcrumb">
       <a href="index.html">首頁</a>
       <span>›</span>
-      <span style="color:var(--dim);">創作者中心</span>
+      <span style="color:var(--dim);">我的帳號</span>
     </nav>
   </div>
 
@@ -303,7 +303,7 @@
 <div class="page-wrap">
 
   <div style="margin-bottom:28px;">
-    <h1 style="font-size:24px;font-weight:900;margin-bottom:6px;">✦ 創作者中心</h1>
+    <h1 style="font-size:24px;font-weight:900;margin-bottom:6px;">✦ 我的帳號</h1>
     <p style="font-size:14px;color:var(--dim);">管理你的自製譜面、上傳新作品，並追蹤社群反饋</p>
   </div>
 
@@ -311,7 +311,7 @@
   <div class="page-tabs">
     <button class="page-tab active" onclick="switchPage('upload',this)">📤 投稿新譜面</button>
     <button class="page-tab" onclick="switchPage('manage',this)">📁 管理我的譜面</button>
-    <button class="page-tab" onclick="switchPage('profile',this)">👤 創作者資料</button>
+    <button class="page-tab" onclick="switchPage('profile',this)">👤 帳號資料</button>
   </div>
 
   <!-- ============================================ -->
@@ -537,7 +537,7 @@
         <button class="btn-prev" onclick="goStep(2)">← 返回資訊</button>
         <div style="display:flex;align-items:center;gap:12px;">
           <span class="step-indicator">步驟 3 / 3</span>
-          <button class="btn-next" onclick="saveDraft()" style="background:rgba(255,111,0,.1);border:1px solid var(--orange);color:var(--orange-l);box-shadow:none;">草稿儲存</button>
+          <label class="field-label">更新封面（JPG / PNG / WebP）<input id="coverEditInput" type="file" accept="image/png,image/jpeg,image/webp" onchange="handleCoverChange(this)"></label><button class="btn-next" onclick="saveDraft()" style="background:rgba(255,111,0,.1);border:1px solid var(--orange);color:var(--orange-l);box-shadow:none;">草稿儲存</button>
           <button class="btn-publish" onclick="publishChart()">🚀 立即發布</button>
         </div>
       </div>
@@ -588,22 +588,22 @@
   <!-- ============================================ -->
   <div class="page-content" id="page-profile">
 
-    <div class="section-hd">創作者身份設定</div>
-    <p style="font-size:13px;color:var(--dim);margin-bottom:20px;">以下資訊將顯示在你的創作者主頁與每張譜面的詳情頁。</p>
+    <div class="section-hd">帳號身分設定</div>
+    <p style="font-size:13px;color:var(--dim);margin-bottom:20px;">以下資訊將顯示在你的帳號主頁與每張譜面的詳情頁。</p>
 
     <div class="profile-card">
       <div class="profile-row">
         <div class="profile-avatar-wrap">
-          <div class="profile-avatar"><img data-user="avatar" alt="創作者頭像" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div>
-          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="handleAvatarChange(this)"><button class="btn-change-avatar" onclick="document.getElementById('avatarInput').click()">更換頭像</button>
+          <div class="profile-avatar"><img data-user="avatar" alt="帳號頭像" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div>
+          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="handleAvatarChange(this)"><button class="btn-change-avatar" onclick="document.getElementById('avatarInput').click()">更換頭像</button><button id="restoreAvatarBtn" class="btn-change-avatar" onclick="restoreDefaultAvatar()">恢復預設頭像</button>
           <span class="badge-discord" data-user="platform"></span>
         </div>
 
         <div class="profile-fields">
           <div class="field-group">
-            <div class="field-label">創作者名義 Charter Name</div>
+            <div class="field-label">名稱 Name</div>
             <input class="field-input" type="text" id="profileCharterName" value="" />
-            <div class="field-hint">此名義將顯示於所有你的譜面詳情頁。預設使用 Google / Discord 名稱，儲存後保留自訂設定。</div>
+            <div class="field-hint">此名稱將顯示於所有你的譜面詳情頁。預設使用 Google / Discord 名稱，儲存後保留自訂設定。</div>
           </div>
           <div class="field-group">
             <div class="field-label">個人簡介</div>
@@ -613,7 +613,7 @@
       </div>
     </div>
 
-    <div class="section-hd">社群帳號連結 <span style="font-size:13px;color:var(--dimmer);font-weight:400;">（選填）</span></div>
+    <div class="section-hd">社群資訊 <span style="font-size:13px;color:var(--dimmer);font-weight:400;">（選填）</span></div>
     <div class="profile-card">
       <div class="profile-fields">
         <div class="field-group">
@@ -666,7 +666,7 @@
     <p>你的自製譜已上線，玩家可以在探索頁面找到並下載你的作品。<br>感謝你對大份吧社群的貢獻！</p>
     <div class="modal-actions">
       <button class="btn-modal-primary" id="publishedChartLink">查看譜面詳情頁</button>
-      <button class="btn-modal-sec" onclick="closeModal()">返回創作者中心</button>
+      <button class="btn-modal-sec" onclick="closeModal()">返回我的帳號</button>
     </div>
   </div>
 </div>

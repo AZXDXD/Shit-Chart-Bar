@@ -1,10 +1,10 @@
 // ============================================================
 // js/pages/charter_studio.js — 創作者後台邏輯
 // ============================================================
-import { initAuth, currentUser, currentProfile, requireAuth, fetchProfile, getUserDisplayData, updateAllAuthUI } from '../auth.js';
+import { initAuth, currentUser, currentProfile, requireAuth, fetchProfile, getUserDisplayData, getProviderAvatar, updateAllAuthUI } from '../auth.js';
 import {
   createChart, updateChart, setChartStatus, deleteChart,
-  getChartsByUser, setChartTags, getAllTags, updateProfile,
+  getChartsByUser, getChart, setChartTags, getAllTags, updateProfile,
 } from '../api.js';
 import {
   uploadChartPackage, uploadCoverArt, uploadChartStrip, uploadAvatar,
@@ -15,12 +15,14 @@ import { renderChartCover } from '../chart-cover.js';
 
 let editingChartId = null; // 目前正在編輯的草稿 ID
 let studioOwner = null;
+let editingExisting = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();
 
   if (!currentUser) { requireAuth(() => {}); return; }
   await initializeStudio();
+  if (location.hash === '#profile') window.switchPage('profile', document.querySelectorAll('.page-tab')[2]);
 });
 
 async function initializeStudio() {
@@ -28,6 +30,7 @@ async function initializeStudio() {
   if (!id) return;
   if (studioOwner !== id) {
     studioOwner = id;
+    editingExisting = false; coverFile = null;
     editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
     ++scanRevision;
     document.getElementById('myChartList').textContent = '載入中…';
@@ -41,6 +44,7 @@ async function initializeStudio() {
 }
 window.addEventListener('authLogin', initializeStudio);
 window.addEventListener('authLogout', () => {
+  editingExisting = false; coverFile = null;
   editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
   document.getElementById('myChartList').textContent = '請先登入以管理你的譜面';
   updateDashboardStats([]); fillProfileForm(null);
@@ -61,7 +65,7 @@ function fillProfileForm(profile = currentProfile) {
 
 window.saveProfile = async function() {
   try {
-    if (!getVal('profileCharterName')) throw new Error('請填寫創作者名義');
+    if (!getVal('profileCharterName')) throw new Error('請填寫名稱');
     const updated = await updateProfile({
       charter_name:    getVal('profileCharterName'),
       bio:             getVal('profileBio'),
@@ -69,7 +73,7 @@ window.saveProfile = async function() {
       twitter_handle:  getVal('profileTwitter'),
       discord_invite:  getVal('profileDiscord'),
     });
-    showToast('✓ 創作者資料已儲存！');
+    showToast('✓ 帳號資料已儲存！');
     if (currentProfile) Object.assign(currentProfile, updated);
     updateAllAuthUI();
   } catch(e) { showToast('儲存失敗：' + e.message, 'error'); }
@@ -87,6 +91,20 @@ window.handleAvatarChange = async function(input) {
     document.querySelectorAll('[data-user="avatar"]').forEach(el => { el.src = url; });
     showToast('✓ 頭像已更新！');
   } catch(e) { showToast('頭像上傳失敗：' + e.message, 'error'); }
+  finally { input.value = ''; }
+};
+
+window.restoreDefaultAvatar = async function() {
+  const button = document.getElementById('restoreAvatarBtn');
+  button.disabled = true;
+  try {
+    const avatar = getProviderAvatar();
+    if (!avatar) throw new Error('目前登入資料沒有 Google / Discord 頭像，請重新登入後再試');
+    await updateProfile({ avatar_url: avatar });
+    updateAllAuthUI();
+    showToast('✓ 已恢復預設頭像！');
+  } catch (e) { showToast('恢復失敗：' + e.message, 'error'); }
+  finally { button.disabled = false; }
 };
 
 // ── 標籤選項 ──────────────────────────────────────────────────
@@ -127,6 +145,7 @@ window.handleDragLeave = function() {
 };
 
 async function processFile(file) {
+  if (editingExisting) { showToast('編輯既有譜面時不能替換遊玩包', 'error'); return; }
   if (!currentUser) { requireAuth(() => {}); return; }
   const revision = ++scanRevision;
   uploadedPackageFile = null; packageCheck = null;
@@ -255,6 +274,7 @@ window.previewYt = function(url) {
 
 // ── 發布 ─────────────────────────────────────────────────────
 window.publishChart = async function() {
+  if (editingExisting) { await window.saveDraft(); return; }
   if (!currentUser) { requireAuth(() => {}); return; }
   if (!editingChartId) {
     try { await createDraft(); } catch(e) { showToast(e.message, 'error'); return; }
@@ -268,6 +288,11 @@ window.publishChart = async function() {
       music_category: getVal('musicCategory'), bpm: parseInt(getVal('songBpm')) || null,
     });
     // 上傳展譜圖
+    if (coverFile) {
+      const coverPath = await uploadCoverArt(editingChartId, coverFile);
+      await updateChart(editingChartId, { cover_path: coverPath });
+      coverFile = null;
+    }
     if (stripFile) {
       showToast('上傳展譜圖中…');
       const stripPath = await uploadChartStrip(editingChartId, stripFile);
@@ -296,11 +321,19 @@ window.publishChart = async function() {
 };
 
 window.saveDraft = async function() {
+  try {
   if (!editingChartId) {
     try { await createDraft(); } catch(e) { showToast(e.message, 'error'); return; }
   }
-  await updateChart(editingChartId, { title: getVal('songTitle'), composer: getVal('songComposer'), charter_name: getVal('charterName'), description: getVal('songDesc'), difficulty: getSelectedDiff() });
-  showToast('✓ 草稿已儲存！'); await loadMyCharts();
+  if (!getVal('songTitle') || !getVal('songComposer')) throw new Error('請填寫曲名與作曲家');
+  const updates = { title: getVal('songTitle'), composer: getVal('songComposer'), charter_name: getVal('charterName'), description: getVal('songDesc') || null, difficulty: getSelectedDiff(), bpm: parseInt(getVal('songBpm')) || null, rating: parseFloat(document.getElementById('ratingDisplay').textContent), music_category: getVal('musicCategory'), youtube_url: getVal('ytUrl') || null };
+  if (coverFile) updates.cover_path = await uploadCoverArt(editingChartId, coverFile);
+  if (stripFile) updates.strip_path = await uploadChartStrip(editingChartId, stripFile);
+  await updateChart(editingChartId, updates);
+  await setChartTags(editingChartId, getSelectedTagIds());
+  coverFile = null; stripFile = null;
+  showToast('✓ 譜面資料已儲存，發布狀態維持不變！'); await loadMyCharts();
+  } catch (e) { showToast('儲存失敗：' + e.message, 'error'); }
 };
 
 // ── 管理後台：載入我的譜面 ────────────────────────────────────
@@ -361,7 +394,8 @@ function renderChartItem(chart) {
         </div>` : ''}
       <div class="chart-item-actions">
         ${isPublished
-          ? `<button class="action-btn primary" onclick="location.href='chart_detail.html?id=${chart.id}'">✏️ 查看</button>
+          ? `<button class="action-btn primary" onclick="resumeEdit('${chart.id}')">✏️ 編輯</button>
+             <button class="action-btn" onclick="location.href='chart_detail.html?id=${chart.id}'">查看詳情</button>
              <button class="action-btn danger"  onclick="unpublishChart('${chart.id}')">⬇ 下架</button>`
           : `<button class="action-btn" onclick="location.href='chart_detail.html?id=${chart.id}'">查看詳情</button>
              <button class="action-btn primary" onclick="resumeEdit('${chart.id}')">✏️ 繼續編輯</button>
@@ -402,13 +436,29 @@ window.removeChart = async function(id) {
   showToast('已刪除'); await loadMyCharts();
 };
 window.resumeEdit = async function(id) {
-  const charts = await getChartsByUser(currentUser?.id, true);
-  const chart = charts.find(c => c.id === id);
-  if (!chart) return;
+  try {
+  const ownerId = currentUser?.id;
+  if (!ownerId) throw new Error('請先登入');
+  const chart = await getChart(id, { countView: false });
+  if (currentUser?.id !== ownerId || chart.user_id !== ownerId) throw new Error('只能編輯自己的譜面');
+  editingExisting = true;
+  uploadedPackageFile = null; packageCheck = null; coverFile = null; stripFile = null; ++scanRevision;
+  window.clearImg();
   editingChartId = id;
   for (const [field,key] of [['songTitle','title'],['songComposer','composer'],['charterName','charter_name'],['songDesc','description'],['songBpm','bpm'],['musicCategory','music_category']]) setVal(field, chart[key] || '');
+  setVal('ytUrl', chart.youtube_url || '');
+  document.getElementById('coverEditInput').value = '';
+  const slider = document.querySelector('.rating-slider');
+  slider.value = Math.round(chart.rating * 10); window.updateRating(slider.value);
+  document.querySelectorAll('.diff-opt').forEach(el => el.classList.toggle('selected', el.textContent.trim().replace("WORLD'S END", 'WORLDS_END') === chart.difficulty));
+  await loadTagOptions();
+  const tagIds = new Set((chart.chart_tags || []).map(t => t.tag_id));
+  document.querySelectorAll('.tag-opt').forEach(el => el.classList.toggle('selected', tagIds.has(Number(el.dataset.tagId))));
+  document.querySelector('[onclick="saveDraft()"]').textContent = '儲存變更';
+  document.querySelector('[onclick="publishChart()"]').hidden = true;
   await window.goStep(2);
   switchPage('upload', null);
+  } catch (e) { showToast(e.message, 'error'); }
 };
 
 // ── 工具函數 ─────────────────────────────────────────────────
@@ -443,6 +493,18 @@ function showToast(msg, type = 'success') {
 }
 
 window.switchPage = function(id, btn) {
+  if (id === 'upload' && btn) {
+    editingExisting = false; editingChartId = null; uploadedPackageFile = null; packageCheck = null; coverFile = null; stripFile = null; ++scanRevision;
+    document.querySelector('[onclick="saveDraft()"]').textContent = '草稿儲存';
+    document.querySelector('[onclick="publishChart()"]').hidden = false;
+    for (const field of ['songTitle', 'songComposer', 'songDesc', 'songBpm', 'ytUrl']) setVal(field, '');
+    setVal('charterName', getUserDisplayData().name);
+    setVal('musicCategory', 'Original');
+    document.getElementById('coverEditInput').value = '';
+    document.querySelectorAll('.tag-opt').forEach(el => el.classList.remove('selected'));
+    window.clearImg();
+    window.goStep(1);
+  }
   document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.page-tab').forEach(b => b?.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
@@ -466,3 +528,4 @@ window.closeModal = function() { document.getElementById('successModal')?.classL
 
 window.toggleDropdown = () => document.getElementById('userDropdown')?.classList.toggle('open');
 window.handleOverlayClick = e => { if (e.target.id === 'successModal') window.closeModal(); };
+window.handleCoverChange = input => { coverFile = input.files[0] || null; };

@@ -98,6 +98,11 @@ export async function createChart(metadata) {
  * 更新譜面資訊
  */
 export async function updateChart(chartId, updates) {
+  if ('status' in updates) throw new Error('請使用發布或下架操作變更狀態');
+  return writeChart(chartId, updates);
+}
+
+async function writeChart(chartId, updates) {
   if (!currentUser) throw new Error('請先登入');
   if ('user_id' in updates || 'id' in updates) throw new Error('不可變更譜面擁有者');
   const { data, error } = await supabase
@@ -121,7 +126,8 @@ export async function setChartStatus(chartId, status) {
     if (error) throw error;
     if (!data.package_path || !data.cover_path) throw new Error('請先上傳完整遊玩包與曲繪封面');
   }
-  return updateChart(chartId, { status });
+  if (!['draft', 'published', 'unpublished'].includes(status)) throw new Error('無效的發布狀態');
+  return writeChart(chartId, { status });
 }
 
 /**
@@ -141,8 +147,10 @@ export async function deleteChart(chartId) {
  * 設定譜面標籤（全量更新）
  */
 export async function setChartTags(chartId, tagIds) {
+  if (!currentUser) throw new Error('請先登入');
   // 先刪除舊的
-  await supabase.from('chart_tags').delete().eq('chart_id', chartId);
+  const { error: deleteError } = await supabase.from('chart_tags').delete().eq('chart_id', chartId);
+  if (deleteError) throw deleteError;
   if (!tagIds.length) return;
   const { error } = await supabase.from('chart_tags').insert(
     tagIds.map(tag_id => ({ chart_id: chartId, tag_id }))

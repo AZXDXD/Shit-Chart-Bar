@@ -34,9 +34,13 @@ export async function uploadChartPackage(chartId, file, onProgress) {
  * 路徑格式：cover-art/{userId}/{chartId}/cover.{ext}
  */
 export async function uploadCoverArt(chartId, file, onProgress) {
+  if (!currentUser) throw new Error('請先登入');
   const ext  = file.name.split('.').pop().toLowerCase();
   if (!['jpg','jpeg','png','webp'].includes(ext)) throw new Error('封面圖請使用 JPG / PNG / WebP');
-  const path = `${currentUser.id}/${chartId}/cover.${ext}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const webp = new TextDecoder().decode(bytes.slice(0,4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8,12)) === 'WEBP';
+  if (!(ext === 'webp' ? webp : validContent(ext === 'jpeg' ? 'jpg' : ext, bytes))) throw new Error('封面格式不正確');
+  const path = `${currentUser.id}/${chartId}/cover-${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage
     .from('cover-art')
@@ -55,9 +59,10 @@ export async function uploadCoverArt(chartId, file, onProgress) {
  * 路徑格式：chart-strips/{userId}/{chartId}/strip.{ext}
  */
 export async function uploadChartStrip(chartId, file, onProgress) {
+  if (!currentUser) throw new Error('請先登入');
   const ext  = file.name.split('.').pop().toLowerCase();
   if (!['jpg','jpeg','png','webp'].includes(ext)) throw new Error('展譜圖請使用 JPG / PNG / WebP');
-  const path = `${currentUser.id}/${chartId}/strip.${ext}`;
+  const path = `${currentUser.id}/${chartId}/strip-${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage
     .from('chart-strips')
