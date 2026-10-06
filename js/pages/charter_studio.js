@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (!currentUser) { requireAuth(() => {}); return; }
   await initializeStudio();
-  if (location.hash === '#profile') window.switchPage('profile', document.querySelectorAll('.page-tab')[2]);
 });
 
 async function initializeStudio() {
@@ -492,8 +491,7 @@ function showToast(msg, type = 'success') {
   toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
 }
 
-window.switchPage = function(id, btn) {
-  if (id === 'upload' && btn) {
+window.addEventListener('accountNewSubmission', () => {
     editingExisting = false; editingChartId = null; uploadedPackageFile = null; packageCheck = null; coverFile = null; stripFile = null; ++scanRevision;
     document.querySelector('[onclick="saveDraft()"]').textContent = '草稿儲存';
     document.querySelector('[onclick="publishChart()"]').hidden = false;
@@ -504,14 +502,11 @@ window.switchPage = function(id, btn) {
     document.querySelectorAll('.tag-opt').forEach(el => el.classList.remove('selected'));
     window.clearImg();
     window.goStep(1);
-  }
-  document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.page-tab').forEach(b => b?.classList.remove('active'));
-  document.getElementById('page-' + id)?.classList.add('active');
-  btn?.classList.add('active');
+});
+window.addEventListener('accountTabChanged', ({ detail: { id } }) => {
   if (id === 'manage') loadMyCharts();
-  if (id === 'profile') initializeStudio();
-};
+  if (id === 'profile') fillProfileForm();
+});
 
 window.updateRating = function(v) {
   const el = document.getElementById('ratingDisplay');

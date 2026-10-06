@@ -159,7 +159,10 @@
     }
     #pauseOverlay.show { opacity:1; }
     .pause-icon { font-size:80px; filter:drop-shadow(0 0 20px rgba(255,111,0,.6)); }
-  </style>
+  .account-link { display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer; }
+.account-link:hover { opacity:.8; }
+.account-link:focus-visible { outline:2px solid var(--orange);outline-offset:4px; }
+</style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
 </head>
@@ -182,9 +185,9 @@
   <div class="top-actions">
     <button class="icon-btn" title="返回詳情頁" onclick="history.back()">←</button>
     <button class="icon-btn" data-auth="guest" onclick="openLoginModal()">登入</button><span data-auth="user" style="display:none;align-items:center;gap:8px;max-width:220px;">
-  <img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+  <a class="account-link" data-account-link href="charter_studio.html#profile" aria-label="我的帳號"><img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
   <span data-user="name" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  <button class="btn-login" onclick="logout()">登出</button>
+  </a><button class="btn-login" onclick="event.stopPropagation();logout()">登出</button>
 </span><button class="icon-btn" id="panelToggleBtn" title="顯示/隱藏設定面板" onclick="togglePanel()">⚙</button>
     <button class="icon-btn" id="fsBtn" title="全螢幕" onclick="toggleFullscreen()">⛶</button>
     <button class="icon-btn" title="下載譜面包" style="color:var(--orange-l);border-color:rgba(255,111,0,.3);">📦</button>
@@ -902,6 +905,7 @@ setTimeout(()=>{
     <button class="icon-btn" onclick="closeLoginModal()">取消</button>
   </div>
 </div>
+<script src="js/account-navigation.js"></script>
 </body>
 </html>
 

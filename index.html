@@ -268,6 +268,9 @@
     }
   .account-link:hover { opacity:.8; }
 .account-link:focus-visible { outline:2px solid var(--orange); outline-offset:4px; }
+.account-link { display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer; }
+.account-link:hover { opacity:.8; }
+.account-link:focus-visible { outline:2px solid var(--orange);outline-offset:4px; }
 </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
@@ -287,9 +290,9 @@
     <a href="#">工具與教學</a>
   </nav>
   <div class="header-right">
-    <button class="btn-submit" onclick="requireAuth(() => location.href='charter_studio.html')">✦ 投稿自製譜</button>
+    <button class="btn-submit" onclick="requireAuth(() => location.href='charter_studio.html#upload')">✦ 投稿自製譜</button>
     <button class="btn-login" data-auth="guest" onclick="openModal()">登入 / 註冊</button><span data-auth="user" style="display:none;align-items:center;gap:8px;max-width:220px;">
-  <a class="account-link" href="charter_studio.html#profile" aria-label="我的帳號" style="display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer;"><img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+  <a class="account-link" data-account-link href="charter_studio.html#profile" aria-label="我的帳號" style="display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer;"><img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
   <span data-user="name" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
   </a><button class="btn-login" onclick="event.stopPropagation();logout()">登出</button>
 </span>
@@ -448,5 +451,6 @@ function updateRange(type, val) {
 function toggleTag(el) { el.classList.toggle('active'); }
 
 </script>
+<script src="js/account-navigation.js"></script>
 </body>
 </html>

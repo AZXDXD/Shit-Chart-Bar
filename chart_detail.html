@@ -313,6 +313,9 @@
       .breadcrumb { display: none; }
     }
   [hidden]{display:none!important;} button:disabled{opacity:.5;cursor:wait;} .review-text{white-space:pre-wrap;overflow-wrap:anywhere;} img{max-width:100%;}
+.account-link { display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer; }
+.account-link:hover { opacity:.8; }
+.account-link:focus-visible { outline:2px solid var(--orange);outline-offset:4px; }
 </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
@@ -336,9 +339,9 @@
   </div>
   <div class="hdr-right">
     <button class="btn-login" data-auth="guest" onclick="openModal()">登入 / 註冊</button><span data-auth="user" style="display:none;align-items:center;gap:8px;max-width:220px;">
-  <img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+  <a class="account-link" data-account-link href="charter_studio.html#profile" aria-label="我的帳號"><img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
   <span data-user="name" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  <button class="btn-login" onclick="logout()">登出</button>
+  </a><button class="btn-login" onclick="event.stopPropagation();logout()">登出</button>
 </span>
   </div>
 </header>
@@ -436,6 +439,7 @@ function switchTab(id, btn) {
 }
 
 </script>
+<script src="js/account-navigation.js"></script>
 </body>
 </html>
 
