@@ -156,7 +156,7 @@ function renderCard(chart) {
         <div class="card-hover-actions">
           ${chart.strip_url ? `<button class="card-hover-btn" onclick="event.stopPropagation();location.href='viewer.html?id=${chart.id}'">🖼️ 展譜</button>` : ''}
           <button class="card-hover-btn primary"
-            onclick="event.stopPropagation();handleDownload(event,'${chart.id}','${chart.title}','${chart.package_url}')">
+            onclick="event.stopPropagation();handleDownload(event,'${chart.id}')">
             📦 下載
           </button>
         </div>
@@ -183,16 +183,10 @@ function renderCard(chart) {
 }
 
 // ── 下載處理（需登入 or 訪客皆可，但記錄需登入） ─────────────
-window.handleDownload = async function(e, chartId, title, packageUrl) {
+window.handleDownload = async function(e, chartId) {
   e.stopPropagation();
   try {
-    const { recordDownload } = await import('../api.js');
-    await recordDownload(chartId).catch(() => {}); // 允許失敗
-    const a = document.createElement('a');
-    a.href     = packageUrl;
-    a.download = `${title}.zip`;
-    a.target   = '_blank';
-    a.click();
+    await downloadChart(chartId);
   } catch(err) { alert('下載失敗：' + err.message); }
 };
 

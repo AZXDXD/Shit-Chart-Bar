@@ -1,7 +1,7 @@
 // ============================================================
 // js/pages/charter_studio.js — 創作者後台邏輯
 // ============================================================
-import { initAuth, currentUser, currentProfile, requireAuth } from '../auth.js';
+import { initAuth, currentUser, currentProfile, requireAuth, fetchProfile, getUserDisplayData, updateAllAuthUI } from '../auth.js';
 import {
   createChart, updateChart, setChartStatus, deleteChart,
   getChartsByUser, setChartTags, getAllTags, updateProfile,
@@ -10,37 +10,57 @@ import {
   uploadChartPackage, uploadCoverArt, uploadChartStrip, uploadAvatar,
 } from '../storage.js';
 
+import { inspectPackage } from '../package-validation.js';
+
 let editingChartId = null; // 目前正在編輯的草稿 ID
+let studioOwner = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();
 
-  // 未登入則跳回首頁
-  if (!currentUser) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  // 載入標籤
-  await loadTagOptions();
-  // 載入我的譜面
-  await loadMyCharts();
-  // 填入個人資料
-  fillProfileForm();
+  if (!currentUser) { requireAuth(() => {}); return; }
+  await initializeStudio();
 });
 
+async function initializeStudio() {
+  const id = currentUser?.id;
+  if (!id) return;
+  if (studioOwner !== id) {
+    studioOwner = id;
+    editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
+    ++scanRevision;
+    document.getElementById('myChartList').textContent = '載入中…';
+    document.getElementById('nextBtn1').disabled = true;
+    updateDashboardStats([]);
+  }
+  const profile = await fetchProfile(id);
+  if (currentUser?.id !== id) return;
+  fillProfileForm(profile);
+  await Promise.all([loadTagOptions().catch(e => showToast(e.message, 'error')), loadMyCharts()]);
+}
+window.addEventListener('authLogin', initializeStudio);
+window.addEventListener('authLogout', () => {
+  editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
+  document.getElementById('myChartList').textContent = '請先登入以管理你的譜面';
+  updateDashboardStats([]); fillProfileForm(null);
+});
+window.addEventListener('authProfileLoaded', () => fillProfileForm());
+window.resetProfileForm = () => fillProfileForm();
+
 // ── 個人資料表單 ──────────────────────────────────────────────
-function fillProfileForm() {
-  if (!currentProfile) return;
-  setVal('profileCharterName', currentProfile.charter_name || currentProfile.username);
-  setVal('profileBio',         currentProfile.bio || '');
-  setVal('profileYt',          currentProfile.yt_channel || '');
-  setVal('profileTwitter',     currentProfile.twitter_handle || '');
-  setVal('profileDiscord',     currentProfile.discord_invite || '');
+function fillProfileForm(profile = currentProfile) {
+  const identity = getUserDisplayData(currentUser, profile);
+  setVal('profileCharterName', currentUser ? identity.name : '');
+  setVal('charterName', currentUser ? identity.name : '');
+  setVal('profileBio',         profile?.bio || '');
+  setVal('profileYt',          profile?.yt_channel || '');
+  setVal('profileTwitter',     profile?.twitter_handle || '');
+  setVal('profileDiscord',     profile?.discord_invite || '');
 }
 
 window.saveProfile = async function() {
   try {
+    if (!getVal('profileCharterName')) throw new Error('請填寫創作者名義');
     const updated = await updateProfile({
       charter_name:    getVal('profileCharterName'),
       bio:             getVal('profileBio'),
@@ -49,7 +69,8 @@ window.saveProfile = async function() {
       discord_invite:  getVal('profileDiscord'),
     });
     showToast('✓ 創作者資料已儲存！');
-    Object.assign(currentProfile, updated);
+    if (currentProfile) Object.assign(currentProfile, updated);
+    updateAllAuthUI();
   } catch(e) { showToast('儲存失敗：' + e.message, 'error'); }
 };
 
@@ -59,7 +80,9 @@ window.handleAvatarChange = async function(input) {
   try {
     showToast('上傳頭像中…');
     const url = await uploadAvatar(input.files[0]);
-    await updateProfile({ avatar_url: url });
+    const updated = await updateProfile({ avatar_url: url });
+    if (currentProfile) Object.assign(currentProfile, updated);
+    updateAllAuthUI();
     document.querySelectorAll('[data-user="avatar"]').forEach(el => { el.src = url; });
     showToast('✓ 頭像已更新！');
   } catch(e) { showToast('頭像上傳失敗：' + e.message, 'error'); }
@@ -84,6 +107,7 @@ function getSelectedTagIds() {
 
 // ── STEP 1: 上傳壓縮包 ───────────────────────────────────────
 let uploadedPackageFile = null;
+let packageCheck = null, scanRevision = 0;
 
 window.handleFileSelect = function(input) {
   if (input.files[0]) processFile(input.files[0]);
@@ -102,53 +126,34 @@ window.handleDragLeave = function() {
 };
 
 async function processFile(file) {
-  if (!file.name.match(/\.(zip|rar)$/i)) {
-    showToast('請上傳 .zip 或 .rar 檔案', 'error');
-    return;
-  }
-  if (file.size > 100 * 1024 * 1024) {
-    showToast('檔案大小不可超過 100 MB', 'error');
-    return;
-  }
-
-  uploadedPackageFile = file;
-  const zone = document.getElementById('uploadZone');
-  zone.classList.add('done');
-
-  // 顯示檔案摘要
-  const summary = document.getElementById('fileSummary');
-  summary.classList.add('show');
-  document.getElementById('fileName').textContent = file.name;
-  document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-
-  // 模擬掃描（實際解析需後端；前端做基本副檔名檢查）
-  await runChecklist();
-}
-
-async function runChecklist() {
-  const checks = [
-    ['ci-chart', 'cd-chart', 'ok',  '偵測到譜面格式（.zip）'],
-    ['ci-audio', 'cd-audio', 'ok',  '音源檔確認（請手動確認包含音檔）'],
-    ['ci-cover', 'cd-cover', 'warn','曲繪圖在下一步上傳（Step 3）'],
-    ['ci-meta',  'cd-meta',  'ok',  '壓縮包格式正常'],
-  ];
-  for (let i = 0; i < checks.length; i++) {
-    await delay(350);
-    const [iconId, detailId, status, msg] = checks[i];
-    const el = document.getElementById(iconId);
-    if (!el) continue;
-    el.className = 'check-icon ' + status;
-    el.textContent = status === 'ok' ? '✓' : status === 'warn' ? '!' : '✗';
-    document.getElementById(detailId).textContent = msg;
-  }
-  // 解鎖下一步
-  await delay(200);
+  if (!currentUser) { requireAuth(() => {}); return; }
+  const revision = ++scanRevision;
+  uploadedPackageFile = null; packageCheck = null;
   const btn = document.getElementById('nextBtn1');
-  if (btn) { btn.removeAttribute('disabled'); btn.style.opacity='1'; btn.style.cursor='pointer'; }
+  btn.disabled = true; btn.style.opacity = '.4';
+  try {
+    const result = await inspectPackage(file);
+    if (revision !== scanRevision || !currentUser) return;
+    for (const kind of ['chart','audio','cover']) {
+      const found = result.found[kind];
+      const icon = document.getElementById('ci-' + kind);
+      icon.className = 'check-icon ' + (found ? 'ok' : 'warn');
+      icon.textContent = found ? '✓' : '✗';
+      document.getElementById('cd-' + kind).textContent = found ? found.name : result.missing.find(m => m.includes(kind === 'chart' ? '譜面' : kind === 'audio' ? '音源' : '曲繪'));
+    }
+    if (result.missing.length) throw new Error(result.missing.join('；'));
+    uploadedPackageFile = file; packageCheck = result;
+    document.getElementById('uploadZone').classList.add('done');
+    document.getElementById('fileSummary').classList.add('show');
+    setTextSafe('fileName', file.name); setTextSafe('fileSize', (file.size / 1024 / 1024).toFixed(2) + ' MB');
+    btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+  } catch (e) { if (revision === scanRevision) showToast(e.message, 'error'); }
 }
 
 // ── STEP 2: 送出基本資訊並建立草稿 ──────────────────────────
 window.goStep = async function(n) {
+  if (!currentUser) { requireAuth(() => {}); return; }
+  if (n > 1 && !editingChartId && !packageCheck) { showToast('請先上傳完整遊玩包', 'error'); return; }
   // Step 2 → 3 時，若尚未建立草稿則先建立
   if (n === 3 && !editingChartId) {
     try {
@@ -177,6 +182,9 @@ window.goStep = async function(n) {
 };
 
 async function createDraft() {
+  if (!currentUser) throw new Error('請先登入');
+  if (!packageCheck || !uploadedPackageFile) throw new Error('請先上傳完整遊玩包');
+  if (!getVal('songTitle') || !getVal('songComposer')) throw new Error('請填寫曲名與作曲家');
   const chart = await createChart({
     title:          getVal('songTitle')      || '未命名譜面',
     composer:       getVal('songComposer')   || '未知',
@@ -191,12 +199,20 @@ async function createDraft() {
   editingChartId = chart.id;
 
   // 上傳壓縮包
+  try {
   if (uploadedPackageFile) {
     showToast('上傳遊玩包中…');
     const pkgPath = await uploadChartPackage(editingChartId, uploadedPackageFile,
       pct => updateProgressBar('pkgProgress', pct));
-    await updateChart(editingChartId, { package_path: pkgPath });
+    const cover = packageCheck.found.cover;
+    const coverPath = await uploadCoverArt(editingChartId, new File([cover.bytes], 'cover.' + cover.ext, { type: cover.ext === 'png' ? 'image/png' : 'image/jpeg' }));
+    await updateChart(editingChartId, { package_path: pkgPath, cover_path: coverPath });
     showToast('✓ 遊玩包上傳完成！');
+  }
+  } catch (error) {
+    // Keep the failed draft visible in management, but retry submission as a fresh draft.
+    editingChartId = null;
+    throw error;
   }
 
   return chart;
@@ -238,11 +254,18 @@ window.previewYt = function(url) {
 
 // ── 發布 ─────────────────────────────────────────────────────
 window.publishChart = async function() {
+  if (!currentUser) { requireAuth(() => {}); return; }
   if (!editingChartId) {
     try { await createDraft(); } catch(e) { showToast(e.message, 'error'); return; }
   }
 
   try {
+    await updateChart(editingChartId, {
+      title: getVal('songTitle'), composer: getVal('songComposer'),
+      charter_name: getVal('charterName'), description: getVal('songDesc'),
+      difficulty: getSelectedDiff(), rating: parseFloat(document.getElementById('ratingDisplay').textContent),
+      music_category: getVal('musicCategory'), bpm: parseInt(getVal('songBpm')) || null,
+    });
     // 上傳展譜圖
     if (stripFile) {
       showToast('上傳展譜圖中…');
@@ -263,7 +286,10 @@ window.publishChart = async function() {
 
     showToast('✓ 譜面發布成功！');
     document.getElementById('successModal')?.classList.add('open');
-    editingChartId = null;
+    const publishedId = editingChartId;
+    document.getElementById('publishedChartLink').onclick = () => { location.href = 'chart_detail.html?id=' + publishedId; };
+    editingChartId = null; uploadedPackageFile = null; packageCheck = null;
+    await window.goStep(1);
     await loadMyCharts();
   } catch(e) { showToast('發布失敗：' + e.message, 'error'); }
 };
@@ -272,30 +298,37 @@ window.saveDraft = async function() {
   if (!editingChartId) {
     try { await createDraft(); } catch(e) { showToast(e.message, 'error'); return; }
   }
-  showToast('✓ 草稿已儲存！');
+  await updateChart(editingChartId, { title: getVal('songTitle'), composer: getVal('songComposer'), charter_name: getVal('charterName'), description: getVal('songDesc'), difficulty: getSelectedDiff() });
+  showToast('✓ 草稿已儲存！'); await loadMyCharts();
 };
 
 // ── 管理後台：載入我的譜面 ────────────────────────────────────
 async function loadMyCharts() {
   const container = document.getElementById('myChartList');
   if (!container) return;
+  if (!currentUser) { container.textContent = '請先登入以管理你的譜面'; return; }
+  const ownerId = currentUser.id;
   container.innerHTML = '<div style="color:var(--dimmer);padding:20px;">載入中…</div>';
 
   try {
     const charts = await getChartsByUser(currentUser.id, true);
+    if (currentUser?.id !== ownerId) return;
+    updateDashboardStats(charts);
     if (!charts.length) {
-      container.innerHTML = '<div style="color:var(--dimmer);padding:20px;">還沒有譜面，去投稿第一張吧！</div>';
+      container.innerHTML = `<div style="color:var(--dimmer);padding:20px;">你目前還沒有投稿任何譜面 <button class="action-btn primary" onclick="switchPage('upload')">投稿自製譜</button></div>`;
       return;
     }
     container.innerHTML = charts.map(renderChartItem).join('');
     // 更新統計數字
     updateDashboardStats(charts);
   } catch(e) {
-    container.innerHTML = `<div style="color:#ef4444;padding:20px;">載入失敗：${e.message}</div>`;
+    container.innerHTML = `<div style="color:#ef4444;padding:20px;">載入失敗：${escapeHtml(e.message)}</div>`;
   }
 }
 
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function renderChartItem(chart) {
+  chart = { ...chart, title: escapeHtml(chart.title), composer: escapeHtml(chart.composer) };
   const DIFF_STYLE = {
     MASTER:    'background:#4a1a7a;color:#d59fff;border:1px solid #7d3c98;',
     ULTIMA:    'background:#1a1a1a;color:#aaa;border:1px solid #555;',
@@ -365,8 +398,13 @@ window.removeChart = async function(id) {
   await deleteChart(id);
   showToast('已刪除'); await loadMyCharts();
 };
-window.resumeEdit = function(id) {
+window.resumeEdit = async function(id) {
+  const charts = await getChartsByUser(currentUser?.id, true);
+  const chart = charts.find(c => c.id === id);
+  if (!chart) return;
   editingChartId = id;
+  for (const [field,key] of [['songTitle','title'],['songComposer','composer'],['charterName','charter_name'],['songDesc','description'],['songBpm','bpm'],['musicCategory','music_category']]) setVal(field, chart[key] || '');
+  await window.goStep(2);
   switchPage('upload', null);
 };
 
@@ -406,6 +444,8 @@ window.switchPage = function(id, btn) {
   document.querySelectorAll('.page-tab').forEach(b => b?.classList.remove('active'));
   document.getElementById('page-' + id)?.classList.add('active');
   btn?.classList.add('active');
+  if (id === 'manage') loadMyCharts();
+  if (id === 'profile') initializeStudio();
 };
 
 window.updateRating = function(v) {
@@ -420,3 +460,6 @@ window.selectDiff = function(el) {
 
 window.toggleTagOpt = function(el) { el.classList.toggle('selected'); };
 window.closeModal = function() { document.getElementById('successModal')?.classList.remove('open'); };
+
+window.toggleDropdown = () => document.getElementById('userDropdown')?.classList.toggle('open');
+window.handleOverlayClick = e => { if (e.target.id === 'successModal') window.closeModal(); };

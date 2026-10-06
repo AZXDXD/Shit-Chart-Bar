@@ -24,7 +24,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
 
 // Storage URL 快速生成器
 export function getStorageUrl(bucket, path) {
-  if (!path) return null;
+  if (!path || bucket === 'chart-packages') return null;
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 

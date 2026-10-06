@@ -1,6 +1,11 @@
 import { supabase } from './supabase.js';
 export let currentUser = null;
 export let currentProfile = null;
+export function setCurrentProfile(profile) {
+  if (profile?.id !== currentUser?.id) return;
+  currentProfile = profile;
+  updateAllAuthUI();
+}
 let initialization, revision = 0, signingIn = false;
 
 function applySession(session, event = 'INITIAL_SESSION') {
@@ -22,6 +27,7 @@ function applySession(session, event = 'INITIAL_SESSION') {
       if (version !== revision) return;
       currentProfile = profile;
       updateAllAuthUI();
+      window.dispatchEvent(new CustomEvent('authProfileLoaded'));
     }, 0);
   } else if (previousId) onLogout();
 }
@@ -84,13 +90,21 @@ async function login(provider) {
   if (errorEl) { errorEl.hidden = true; errorEl.style.display = 'none'; }
   try {
     const redirectTo = getOAuthRedirectUrl();
+    // Strip callback tokens before diagnostics; never print a raw session URL.
+    console.log('Current URL:', redirectTo);
+    console.log('Origin:', window.location.origin);
     console.log('[Auth] signInWithOAuth:', provider);
-    console.log('[Auth] OAuth redirectTo:', redirectTo);
-    const { error } = await supabase.auth.signInWithOAuth({ provider,
+    console.log('OAuth redirectTo:', redirectTo);
+    const { data, error } = await supabase.auth.signInWithOAuth({ provider,
       // Supabase's Discord provider already requests identify + email.
-      options: { redirectTo },
+      options: { redirectTo, skipBrowserRedirect: true },
     });
     if (error) throw error;
+    if (!data?.url) throw new Error('Supabase 未回傳 OAuth 授權網址');
+    const authorizeUrl = new URL(data.url);
+    console.log('[Auth] Supabase authorize endpoint:', authorizeUrl.origin + authorizeUrl.pathname);
+    console.log('[Auth] Supabase redirect_to:', authorizeUrl.searchParams.get('redirect_to'));
+    window.location.assign(data.url);
   } catch (error) {
     console.error('[Auth] OAuth failed (' + provider + '):', error);
     showAuthError('登入失敗：' + error.message);
@@ -116,12 +130,12 @@ export function getUserDisplayData(user = currentUser, profile = currentProfile)
   const metadata = user?.user_metadata ?? {};
   const issuer = metadata.iss || '';
   const provider = issuer.includes('discord.com') ? 'discord' : issuer.includes('accounts.google.com') ? 'google' : user?.app_metadata?.provider || '';
-  const discordName = metadata.custom_claims?.global_name || metadata.global_name || metadata.full_name || metadata.preferred_username || metadata.username || metadata.name;
+  const discordName = metadata.custom_claims?.global_name || metadata.global_name || metadata.full_name || metadata.name || metadata.user_name || metadata.preferred_username || metadata.username;
   return {
     id: user?.id ?? null,
     email: user?.email || metadata.email || '',
     provider,
-    name: profile?.charter_name || profile?.username || (provider === 'discord' ? discordName : metadata.full_name || metadata.name) || user?.email || '使用者',
+    name: profile?.charter_name || profile?.username || (provider === 'discord' ? discordName : metadata.full_name || metadata.name || metadata.user_name || metadata.preferred_username || metadata.username) || metadata.email || user?.email || '使用者',
     avatar: profile?.avatar_url || metadata.avatar_url || metadata.picture || '',
   };
 }

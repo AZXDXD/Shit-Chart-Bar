@@ -367,6 +367,7 @@
   </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
+<script type="module" src="js/pages/chart-download.js"></script>
 </head>
 <body>
 
@@ -426,10 +427,10 @@
 
 <!-- ===== ACTION BAR ===== -->
 <div class="action-bar">
-  <button class="btn-dl">
+  <button class="btn-dl" id="packageDownloadBtn">
     <div>
       <div style="font-size:16px;">📦 下載完整遊玩包</div>
-      <div class="btn-dl-meta">14.2 MB &nbsp;·&nbsp; 含 譜面 + 音檔 + 曲繪</div>
+      <div class="btn-dl-meta">含 譜面 + 音檔 + 曲繪</div>
     </div>
   </button>
   <button class="btn-fav" id="favBtn" onclick="toggleFav()">

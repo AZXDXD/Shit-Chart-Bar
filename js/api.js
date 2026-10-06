@@ -2,7 +2,7 @@
 // js/api.js — 所有資料庫操作 API
 // ============================================================
 import { supabase, getStorageUrl } from './supabase.js';
-import { currentUser } from './auth.js';
+import { currentUser, setCurrentProfile } from './auth.js';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  CHARTS                                                  ║
@@ -62,6 +62,7 @@ export async function getChart(chartId) {
  * 取得創作者的所有譜面
  */
 export async function getChartsByUser(userId, includesDrafts = false) {
+  if (includesDrafts && (!currentUser || userId !== currentUser.id)) throw new Error('請先登入自己的帳號');
   let q = supabase
     .from('charts')
     .select('*')
@@ -79,6 +80,7 @@ export async function getChartsByUser(userId, includesDrafts = false) {
  * 建立新譜面（草稿）
  */
 export async function createChart(metadata) {
+  if (!currentUser) throw new Error('請先登入');
   const { data, error } = await supabase
     .from('charts')
     .insert({ ...metadata, user_id: currentUser.id, status: 'draft' })
@@ -92,6 +94,8 @@ export async function createChart(metadata) {
  * 更新譜面資訊
  */
 export async function updateChart(chartId, updates) {
+  if (!currentUser) throw new Error('請先登入');
+  if ('user_id' in updates || 'id' in updates) throw new Error('不可變更譜面擁有者');
   const { data, error } = await supabase
     .from('charts')
     .update(updates)
@@ -107,6 +111,12 @@ export async function updateChart(chartId, updates) {
  * 發布 / 下架譜面
  */
 export async function setChartStatus(chartId, status) {
+  if (!currentUser) throw new Error('請先登入');
+  if (status === 'published') {
+    const { data, error } = await supabase.from('charts').select('package_path, cover_path').eq('id', chartId).eq('user_id', currentUser.id).single();
+    if (error) throw error;
+    if (!data.package_path || !data.cover_path) throw new Error('請先上傳完整遊玩包與曲繪封面');
+  }
   return updateChart(chartId, { status });
 }
 
@@ -114,6 +124,7 @@ export async function setChartStatus(chartId, status) {
  * 刪除譜面
  */
 export async function deleteChart(chartId) {
+  if (!currentUser) throw new Error('請先登入');
   const { error } = await supabase
     .from('charts')
     .delete()
@@ -140,7 +151,8 @@ function enrichChart(chart) {
   return {
     ...chart,
     cover_url:   getStorageUrl('cover-art',      chart.cover_path),
-    package_url: getStorageUrl('chart-packages',  chart.package_path),
+    // Private packages get a short-lived URL only when the user downloads.
+    package_url: null,
     strip_url:   getStorageUrl('chart-strips',    chart.strip_path),
   };
 }
@@ -386,13 +398,15 @@ export async function recordDownload(chartId) {
 
 export async function updateProfile(updates) {
   if (!currentUser) throw new Error('請先登入');
+  if ('id' in updates) throw new Error('不可變更使用者');
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .upsert({ username: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || '使用者', ...updates, id: currentUser.id })
     .eq('id', currentUser.id)
     .select()
     .single();
   if (error) throw error;
+  setCurrentProfile(data);
   return data;
 }
 

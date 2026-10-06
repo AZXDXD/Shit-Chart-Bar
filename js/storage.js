@@ -3,16 +3,18 @@
 // ============================================================
 import { supabase, getStorageUrl } from './supabase.js';
 import { currentUser } from './auth.js';
+import { validContent } from './package-validation.js';
 
 // ── 上傳進度回呼型別 ─────────────────────────────────────────
 // onProgress(percent: 0~100)
 
 /**
- * 上傳譜面遊玩包 (.zip / .rar)
+ * 上傳譜面遊玩包 (.zip)，private bucket
  * 路徑格式：chart-packages/{userId}/{chartId}/package.zip
  */
 export async function uploadChartPackage(chartId, file, onProgress) {
-  const ext  = file.name.split('.').pop();
+  if (!currentUser) throw new Error('請先登入');
+  const ext  = file.name.split('.').pop().toLowerCase();
   const path = `${currentUser.id}/${chartId}/package.${ext}`;
 
   const { error } = await supabase.storage
@@ -73,8 +75,13 @@ export async function uploadChartStrip(chartId, file, onProgress) {
  * 上傳創作者頭像
  */
 export async function uploadAvatar(file, onProgress) {
+  if (!currentUser) throw new Error('請先登入');
   const ext  = file.name.split('.').pop().toLowerCase();
-  const path = `${currentUser.id}/avatar.${ext}`;
+  if (!['jpg','jpeg','png','webp'].includes(ext) || file.size > 5 * 1024 * 1024) throw new Error('頭像請使用 5 MB 以下 JPG / PNG / WebP');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const isWebp = new TextDecoder().decode(bytes.slice(0,4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8,12)) === 'WEBP';
+  if (!(ext === 'webp' ? isWebp : validContent(ext === 'jpeg' ? 'jpg' : ext, bytes))) throw new Error('頭像格式不正確');
+  const path = `${currentUser.id}/avatar-${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage
     .from('avatars')
@@ -106,10 +113,12 @@ export async function deleteChartFiles(chartId) {
  * expires: 秒數（預設 60 秒，夠使用者點擊觸發下載）
  */
 export async function getSignedDownloadUrl(bucket, path, expires = 60) {
+  if (!path) throw new Error('找不到下載檔案');
   const { data, error } = await supabase.storage
     .from(bucket)
-    .createSignedUrl(path, expires);
+    .createSignedUrl(path, expires, { download: true });
   if (error) throw error;
+  if (!data?.signedUrl) throw new Error('無法建立下載連結');
   return data.signedUrl;
 }
 
@@ -122,7 +131,6 @@ export function triggerDownload(url, filename) {
   const a = document.createElement('a');
   a.href     = url;
   a.download = filename;
-  a.target   = '_blank';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -131,8 +139,26 @@ export function triggerDownload(url, filename) {
 /**
  * 完整下載流程：記錄 + 觸發下載
  */
-export async function downloadChart(chart) {
+export async function getChartDownload(chartOrId) {
+  const id = typeof chartOrId === 'string' ? chartOrId : chartOrId?.id;
+  if (!id) throw new Error('找不到譜面');
+  // Refetch authoritative status/path; never trust a caller-supplied URL or cached chart.
+  const { data: chart, error } = await supabase.from('charts')
+    .select('id,user_id,title,difficulty,rating,status,package_path')
+    .eq('id', id).single();
+  if (error) throw error;
+  if (!chart || (chart.status !== 'published' && chart.user_id !== currentUser?.id)) {
+    throw new Error('你沒有權限下載此譜面');
+  }
+  if (!chart.package_path?.startsWith(`${chart.user_id}/${chart.id}/`)) throw new Error('遊玩包路徑不正確');
+  // Storage SELECT RLS independently enforces owner/published access, even for direct requests.
+  const url = await getSignedDownloadUrl('chart-packages', chart.package_path, 60);
+  return { chart, url };
+}
+
+export async function downloadChart(chartOrId) {
+  const { chart, url } = await getChartDownload(chartOrId);
+  triggerDownload(url, `${chart.title} [${chart.difficulty} ${chart.rating}].zip`);
   const { recordDownload } = await import('./api.js');
-  await recordDownload(chart.id);
-  triggerDownload(chart.package_url, `${chart.title} [${chart.difficulty} ${chart.rating}].zip`);
+  await recordDownload(chart.id).catch(() => {});
 }

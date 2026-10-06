@@ -14,14 +14,14 @@ const supabase = {
   auth: {
     onAuthStateChange(fn) { listenerCount++; callback = fn; },
     async getSession() { return { data: { session }, error: null }; },
-    async signInWithOAuth(options) { oauthOptions = options; return { error: null }; },
+    async signInWithOAuth(options) { oauthOptions = options; return { data: { url: 'https://wnjmtgefhgoshgmxmxbd.supabase.co/auth/v1/authorize?provider=' + options.provider + '&redirect_to=' + encodeURIComponent(options.options.redirectTo) }, error: null }; },
     async signOut() { if (!signOutError) { session = null; callback('SIGNED_OUT', null); } return { error: signOutError }; },
   },
   from() { profileRequests++; return { select() { return { eq() { return { async maybeSingle() { return { data: null, error: { message: 'profiles not installed' } }; } }; } }; } }; },
 };
 const context = vm.createContext({
   supabase, URL, URLSearchParams, console: { log() {}, error() {}, warn() {}, debug(...args) { debugLogs.push(args); } },
-  location: { href: 'https://example.com/sub/chart_detail.html?id=42#charter' },
+  location: { href: 'https://example.com/sub/chart_detail.html?id=42#charter', assign(url) { this.lastNavigation = url; } },
   history: { replaceState() {} }, alert(message) { throw new Error(message); },
   document: { readyState: 'loading', addEventListener() {}, getElementById(id) { return elements.get(id); }, querySelectorAll(selector) { return selectors[selector] || []; }, createElement() { return element(); } },
   setTimeout(fn) { queued.push(fn); }, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
@@ -92,6 +92,10 @@ for (const startUrl of [
     await run(`loginWith${provider}()`);
     assert.equal(oauthOptions.provider, provider.toLowerCase());
     assert.equal(oauthOptions.options.redirectTo, startUrl);
+    assert.equal(oauthOptions.options.skipBrowserRedirect, true);
+    const navigation = new URL(context.location.lastNavigation);
+    assert.equal(navigation.searchParams.get('provider'), provider.toLowerCase());
+    assert.equal(navigation.searchParams.get('redirect_to'), startUrl);
   }
 }
 context.location.href = 'https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html?id=42&provider_token=old&provider_refresh_token=old&expires_in=3600&expires_at=1&token_type=bearer#access_token=old';

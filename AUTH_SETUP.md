@@ -1,5 +1,23 @@
 # Google / Discord OAuth 登入設定與測試
 
+## 2026-10-06 實際 redirect 追蹤
+
+已核對正式 Pages 上的 js/auth.js：首頁產生的 redirectTo 為
+https://azxdxd.github.io/Shit-Chart-Bar/，沒有寫死本機網址。
+對 Google、Discord 各自實際送出 /auth/v1/authorize（redirect_to 為上述正式網址），
+兩者均回應 302 到正確 Provider，Provider redirect_uri 均為 Supabase callback。
+再使用各自授權 state 模擬 access_denied 取消回呼，兩者的 Supabase callback
+均回應 302，Location 的 origin/path 是 http://localhost:3000/。
+這是直接 HTTP 追蹤，並非瀏覽器 Network 匯出；瀏覽器另重現 Google 成功登入後本機連線失敗。
+可執行 node tests/oauth-redirect-trace.mjs 重現（需要網路；使用取消回呼，不登入、不輸出 state/token）。
+GitHub Pages 設定 API 未登入回傳 404，正式網址則由實際可開啟的部署頁面及 repository remote 核對。
+localhost 是 Supabase 回呼回傳的目的地，不是 Pages 前端產生的 redirectTo。
+尚未直接讀取 Dashboard 設定；請在同一專案核對下列 Site URL / Redirect URLs 並儲存。
+
+js/auth.js 現在先取得 SDK 產生的授權 URL，安全輸出 Current URL（移除 OAuth token）、
+Origin、OAuth redirectTo、Supabase authorize endpoint、Supabase redirect_to，然後導頁。
+不輸出 token、state 或 session。這些新增診斷須部署後才會出現在正式網站。
+
 前端使用 Supabase 專案 https://wnjmtgefhgoshgmxmxbd.supabase.co 與既有公開 anon key。
 沒有 Google Client Secret、service_role key 或 secret key。
 
@@ -26,7 +44,7 @@ redirectTo 自動取目前 origin、路徑和查詢參數，保留 GitHub Pages 
 若正式登入仍回到 localhost，先確認後台 Site URL 已儲存為上面的正式網址，Redirect URLs 已加入上面的清單。
 Supabase 對不被允許的 redirect_to 會改用 Site URL；前端無法覆寫後台允許清單。
 此 repository 的文件不是後台設定，修改文件不會自動更新 Supabase。
-部署後，Google / Discord 點擊登入時 Console 的 [Auth] OAuth redirectTo 必須是開始登入的正式頁面。
+部署後，Google / Discord 點擊登入時 Console 的 OAuth redirectTo 必須是開始登入的正式頁面。
 Network 的 /auth/v1/authorize 請求中 redirect_to 應與之相同（URL 編碼後）。
 若缺少此診斷訊息或 redirect_to 仍是 localhost，確認 Pages 已發布新版 js/auth.js，再強制重新整理。
 若 redirect_to 正確但回到 localhost，檢查同一 Supabase 專案 wnjmtgefhgoshgmxmxbd 的 URL Configuration。
