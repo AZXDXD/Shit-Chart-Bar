@@ -15,7 +15,7 @@ const studio = fs.readFileSync('js/pages/charter_studio.js','utf8');
 const save = studio.slice(studio.indexOf('window.saveDraft ='),studio.indexOf('// ── 管理後台'));
 for (const status of ['published','draft']) {
   const chart = {status}; let tags;
-  const ctx = vm.createContext({window:{},editingChartId:'chart',coverFile:null,stripFile:null, getVal:id=>({songTitle:'Updated',songComposer:'Composer',songBpm:'180',songDesc:'Description',musicCategory:'Original',ytUrl:''}[id]||''),getSelectedDiff:()=> 'EXPERT',document:{getElementById:()=>({textContent:'12.5'})},getSelectedTagIds:()=>[],setChartTags:async(id,values)=>{tags=values;}, updateChart:async(id,updates)=>{assert.ok(!('status' in updates));Object.assign(chart,updates);},showToast:()=>{},loadMyCharts:async()=>{}});
+  const ctx = vm.createContext({window:{},editingChartId:'chart',coverFile:null,stripFile:null, getVal:id=>({songTitle:'Updated',songComposer:'Composer',songBpm:'180',songDesc:'Description',musicCategory:'Original',ytUrl:''}[id]||''),getSelectedDiff:()=> 'EXPERT',document:{getElementById:()=>({textContent:'12.5'})},getSelectedTagNames:()=>[],setChartTags:async(id,values)=>{tags=values;}, updateChart:async(id,updates)=>{assert.ok(!('status' in updates));Object.assign(chart,updates);},showToast:()=>{},loadMyCharts:async()=>{}});
   vm.runInContext(save,ctx); await ctx.window.saveDraft();
   assert.equal(chart.status,status);assert.equal(chart.bpm,180);assert.equal(chart.rating,12.5);assert.equal(chart.title,'Updated');assert.equal(chart.difficulty,'EXPERT');assert.equal(tags.length,0);
 }

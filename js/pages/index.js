@@ -4,7 +4,7 @@
 import { initAuth, requireAuth, currentUser } from '../auth.js';
 import { searchCharts, getAllTags } from '../api.js';
 import { downloadChart } from '../storage.js';
-import { getStorageUrl } from '../supabase.js';
+import { supabase } from '../supabase.js';
 import { renderChartCover, escapeHtml } from '../chart-cover.js';
 
 // ── 狀態 ─────────────────────────────────────────────────────
@@ -14,6 +14,7 @@ let hasMore       = true;
 let pendingReset  = false;
 let currentFilter = {
   query:      '',
+  tagId: null,
   difficulty: null,
   minRating:  1.0,
   maxRating:  16.0,
@@ -60,13 +61,14 @@ async function loadTags() {
     const tags = await getAllTags();
     const container = document.getElementById('topicTags');
     if (!container) return;
-    container.innerHTML = tags.map(tag => `
-      <button class="topic-tag" data-tag-id="${tag.id}"
-              onclick="toggleTopicTag(this, ${tag.id})"
-              style="--tag-color:${tag.color}">
-        # ${tag.name}
-      </button>
-    `).join('');
+    container.replaceChildren();
+    // popular_chart_tags already sorts by published-chart usage, most used first.
+    tags.slice(0, 8).forEach(tag => {
+      const button = document.createElement('button'); button.className='topic-tag';
+      button.textContent='# '+tag.name;
+      button.onclick=()=>window.toggleTopicTag(button,tag.id);
+      container.append(button);
+    });
   } catch(e) { console.error('loadTags:', e); }
 }
 
@@ -212,17 +214,25 @@ window.updateRange = function(type, val) {
 };
 
 // ── Topic Tags ────────────────────────────────────────────────
-window.toggleTopicTag = function(btn) { btn.classList.toggle('active'); };
+window.toggleTopicTag = function(btn, tagId) {
+  currentFilter.tagId = currentFilter.tagId === tagId ? null : tagId;
+  document.querySelectorAll('#topicTags button').forEach(item => item.classList.toggle('active', item === btn && currentFilter.tagId !== null));
+  loadCharts(true);
+};
 
 // 暴露給 window
 window.loadCharts = loadCharts;
 
-// Every featured entry links to the same UUID detail page.
+// Keep each cover, metadata and UUID link together in its existing slide.
 let featuredSlide=0, featuredCount=0;
 window.goSlide=function(index) {
   if (!featuredCount) return;
   featuredSlide=(index+featuredCount)%featuredCount;
   document.getElementById('carouselTrack').style.transform=`translateX(-${featuredSlide*(100/featuredCount)}%)`;
+  document.querySelectorAll('#carouselTrack .carousel-slide').forEach((slide,i)=>{
+    slide.inert=i!==featuredSlide;
+    slide.setAttribute('aria-hidden',String(i!==featuredSlide));
+  });
   document.querySelectorAll('#carouselDots .dot').forEach((dot,i)=>dot.classList.toggle('active',i===featuredSlide));
 };
 window.prevSlide=()=>window.goSlide(featuredSlide-1);
@@ -232,9 +242,34 @@ async function loadFeatured() {
   try {
     const charts=await searchCharts({limit:3}); featuredCount=charts.length;
     if(!featuredCount){track.parentElement.hidden=true;return;}
+    // search_charts returns cover_path but no tags; fetch tags for only these slides.
+    const {data:tagRows,error:tagError}=await supabase.from('chart_tags')
+      .select('chart_id,tags(name)').in('chart_id',charts.map(chart=>chart.id));
+    if(tagError) console.error('loadFeatured tags:',tagError);
+    charts.forEach(chart=>{
+      chart.tags=(tagRows || []).filter(row=>row.chart_id===chart.id).map(row=>row.tags).filter(Boolean);
+    });
     track.style.width=`${featuredCount*100}%`;
-    track.innerHTML=charts.map(chart=>`<div class="carousel-slide" style="width:${100/featuredCount}%"><div class="carousel-bg"></div><div class="carousel-overlay"></div><div class="carousel-content"><div><div class="carousel-badge">最新發布</div><div class="carousel-title">${escapeHtml(chart.title)}</div><div class="carousel-meta">${escapeHtml(chart.composer)} · ${escapeHtml(chart.charter_name)}</div><span class="difficulty-badge">${escapeHtml(chart.difficulty)} ${escapeHtml(chart.rating)}</span></div><div class="carousel-actions"><a class="btn-viewer" href="chart_detail.html?id=${encodeURIComponent(chart.id)}">查看譜面詳情</a><button class="btn-dl" onclick="handleDownload(event,'${chart.id}')">📦 下載遊玩包</button></div></div></div>`).join('');
+    track.innerHTML=charts.map((chart,index)=>{
+      const detailUrl=`chart_detail.html?id=${encodeURIComponent(chart.id)}`;
+      const tags=(chart.tags || []).slice(0,4).map(tag=>`<span class="carousel-tag"># ${escapeHtml(tag.name)}</span>`).join('');
+      const extraTags=(chart.tags || []).length-4;
+      return `<div class="carousel-slide" style="width:${100/featuredCount}%">
+        <div class="carousel-bg">${renderChartCover(chart,{priority:index===0})}</div>
+        <div class="carousel-overlay"></div>
+        <a class="carousel-card-link" href="${detailUrl}" aria-label="${escapeHtml(chart.title)}：查看譜面詳情"></a>
+        <div class="carousel-content"><div class="carousel-info">
+          <div class="carousel-badge">最新發布</div>
+          <div class="carousel-title">${escapeHtml(chart.title)}</div>
+          <div class="carousel-meta">${escapeHtml(chart.composer)} · Chart by ${escapeHtml(chart.charter_name)}</div>
+          <div class="carousel-details"><span class="difficulty-badge">${escapeHtml(chart.difficulty)} ${escapeHtml(chart.rating)}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
+          <div class="carousel-tags">${tags}${extraTags>0?`<span class="carousel-tag">+${extraTags}</span>`:''}</div>
+        </div><div class="carousel-actions"><a class="btn-viewer" href="${detailUrl}">查看譜面詳情</a><button class="btn-dl" data-chart-id="${escapeHtml(chart.id)}">📦 下載遊玩包</button></div></div>
+      </div>`;
+    }).join('');
+    track.querySelectorAll('.btn-dl').forEach(button=>button.addEventListener('click',event=>window.handleDownload(event,button.dataset.chartId)));
     document.getElementById('carouselDots').innerHTML=charts.map((_,index)=>`<button class="dot ${index===0?'active':''}" onclick="goSlide(${index})" aria-label="第 ${index+1} 張譜面"></button>`).join('');
+    window.goSlide(0);
     if(featuredCount>1)setInterval(()=>window.nextSlide(),4500);
   } catch {track.textContent='譜面載入失敗';}
 }

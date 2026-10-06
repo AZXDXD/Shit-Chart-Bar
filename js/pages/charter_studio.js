@@ -1,10 +1,12 @@
+import { createTagEditor } from '../chart-tags.js';
+import { searchChartTags, getAllTags } from '../api.js';
 // ============================================================
 // js/pages/charter_studio.js — 創作者後台邏輯
 // ============================================================
 import { initAuth, currentUser, currentProfile, requireAuth, fetchProfile, getUserDisplayData, getProviderAvatar, updateAllAuthUI } from '../auth.js';
 import {
   createChart, updateChart, setChartStatus, deleteChart,
-  getChartsByUser, getChart, setChartTags, getAllTags, updateProfile,
+  getChartsByUser, getChart, setChartTags, updateProfile,
 } from '../api.js';
 import {
   uploadChartPackage, uploadCoverArt, uploadChartStrip, uploadAvatar,
@@ -29,6 +31,7 @@ async function initializeStudio() {
   if (!id) return;
   if (studioOwner !== id) {
     studioOwner = id;
+    tagEditor?.set([]);
     editingExisting = false; coverFile = null;
     editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
     ++scanRevision;
@@ -43,6 +46,7 @@ async function initializeStudio() {
 }
 window.addEventListener('authLogin', initializeStudio);
 window.addEventListener('authLogout', () => {
+  tagEditor?.set([]);
   editingExisting = false; coverFile = null;
   editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
   document.getElementById('myChartList').textContent = '請先登入以管理你的譜面';
@@ -107,21 +111,15 @@ window.restoreDefaultAvatar = async function() {
 };
 
 // ── 標籤選項 ──────────────────────────────────────────────────
+let tagEditor;
 async function loadTagOptions() {
-  const tags = await getAllTags();
-  const container = document.getElementById('tagSelector');
-  if (!container) return;
-  container.innerHTML = tags.map(tag => `
-    <button class="tag-opt" data-tag-id="${tag.id}" onclick="this.classList.toggle('selected')">
-      # ${tag.name}
-    </button>
-  `).join('');
+  if (!tagEditor) tagEditor = createTagEditor(document.getElementById('tagSelector'), document.getElementById('customTagInput'), document.getElementById('addCustomTag'), document.getElementById('customTagHint'), {
+    dropdown: document.getElementById('tagSuggestions'),
+    search: query => searchChartTags(query, 10),
+    popular: async () => (await getAllTags()).slice(0, 10),
+  });
 }
-
-function getSelectedTagIds() {
-  return [...document.querySelectorAll('.tag-opt.selected')]
-    .map(el => parseInt(el.dataset.tagId));
-}
+function getSelectedTagNames() { return tagEditor?.get() || []; }
 
 // ── STEP 1: 上傳壓縮包 ───────────────────────────────────────
 let uploadedPackageFile = null;
@@ -303,8 +301,8 @@ window.publishChart = async function() {
     if (ytUrl) await updateChart(editingChartId, { youtube_url: ytUrl });
 
     // 設定標籤
-    const tagIds = getSelectedTagIds();
-    if (tagIds.length) await setChartTags(editingChartId, tagIds);
+    const tagIds = getSelectedTagNames();
+    await setChartTags(editingChartId, tagIds);
 
     // 發布
     await setChartStatus(editingChartId, 'published');
@@ -329,7 +327,7 @@ window.saveDraft = async function() {
   if (coverFile) updates.cover_path = await uploadCoverArt(editingChartId, coverFile);
   if (stripFile) updates.strip_path = await uploadChartStrip(editingChartId, stripFile);
   await updateChart(editingChartId, updates);
-  await setChartTags(editingChartId, getSelectedTagIds());
+  await setChartTags(editingChartId, getSelectedTagNames());
   coverFile = null; stripFile = null;
   showToast('✓ 譜面資料已儲存，發布狀態維持不變！'); await loadMyCharts();
   } catch (e) { showToast('儲存失敗：' + e.message, 'error'); }
@@ -451,8 +449,7 @@ window.resumeEdit = async function(id) {
   slider.value = Math.round(chart.rating * 10); window.updateRating(slider.value);
   document.querySelectorAll('.diff-opt').forEach(el => el.classList.toggle('selected', el.textContent.trim().replace("WORLD'S END", 'WORLDS_END') === chart.difficulty));
   await loadTagOptions();
-  const tagIds = new Set((chart.chart_tags || []).map(t => t.tag_id));
-  document.querySelectorAll('.tag-opt').forEach(el => el.classList.toggle('selected', tagIds.has(Number(el.dataset.tagId))));
+  tagEditor.set((chart.chart_tags || []).map(row => row.tags?.name).filter(Boolean));
   document.querySelector('[onclick="saveDraft()"]').textContent = '儲存變更';
   document.querySelector('[onclick="publishChart()"]').hidden = true;
   await window.goStep(2);
@@ -499,7 +496,7 @@ window.addEventListener('accountNewSubmission', () => {
     setVal('charterName', getUserDisplayData().name);
     setVal('musicCategory', 'Original');
     document.getElementById('coverEditInput').value = '';
-    document.querySelectorAll('.tag-opt').forEach(el => el.classList.remove('selected'));
+    tagEditor?.set([]);
     window.clearImg();
     window.goStep(1);
 });

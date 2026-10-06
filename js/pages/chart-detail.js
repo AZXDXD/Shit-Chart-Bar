@@ -2,7 +2,7 @@ import { supabase } from '../supabase.js';
 import { initAuth, currentUser, openLoginModal } from '../auth.js';
 import { getStripViewer } from '../chart-strip-viewer.js';
 import { getChart, getReviews, isFavorited, toggleFavorite, upsertReview,
-  submitCommunityRating, toggleReviewReaction, getReviewReactions, toggleTagVote, searchCharts } from '../api.js';
+  submitCommunityRating, toggleReviewReaction, getReviewReactions, searchCharts } from '../api.js';
 
 const id = new URLSearchParams(location.search).get('id');
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -177,16 +177,8 @@ async function loadTags() {
   if(!data.length)el('chartTags').textContent='尚未設定標籤';
   for(const row of data) {
     if(!row.tags)continue;
-    const button=document.createElement('button'); button.className='qtag'; el('chartTags').append(button);
-    const refresh=async()=>{
-      const {count,error}=await supabase.from('chart_tag_votes').select('tag_id',{count:'exact',head:true}).eq('chart_id',id).eq('tag_id',row.tag_id);
-      if(error)throw error;
-      let mine=false;
-      if(currentUser) {const result=await supabase.from('chart_tag_votes').select('tag_id').eq('chart_id',id).eq('tag_id',row.tag_id).eq('user_id',currentUser.id).maybeSingle(); if(result.error)throw result.error; mine=!!result.data;}
-      button.textContent=`${row.tags.name} · ${count}`; button.classList.toggle('active',mine); button.setAttribute('aria-pressed',String(mine));
-    };
-    await refresh();
-    button.onclick=()=>{if(loginRequired())return;action(button,async()=>{await toggleTagVote(id,row.tag_id);await refresh();});};
+    const badge=document.createElement('span'); badge.className='qtag';
+    badge.textContent='#'+row.tags.name; el('chartTags').append(badge);
   }
 }
 async function loadRelated() {

@@ -3,6 +3,7 @@
 // ============================================================
 import { supabase, getStorageUrl } from './supabase.js';
 import { currentUser, setCurrentProfile } from './auth.js';
+import { normalizeTags } from './chart-tags.js';
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  CHARTS                                                  ║
@@ -21,10 +22,11 @@ import { currentUser, setCurrentProfile } from './auth.js';
  */
 export async function searchCharts({
   query = '', difficulty = null, minRating = 1.0, maxRating = 16.0,
-  sortBy = 'published_at', page = 0, limit = 20,
+  sortBy = 'published_at', page = 0, limit = 20, tagId = null,
 } = {}) {
   const { data, error } = await supabase.rpc('search_charts', {
     query,
+    tag_filter: tagId,
     diff:        difficulty,
     min_r:       minRating,
     max_r:       maxRating,
@@ -146,15 +148,9 @@ export async function deleteChart(chartId) {
 /**
  * 設定譜面標籤（全量更新）
  */
-export async function setChartTags(chartId, tagIds) {
+export async function setChartTags(chartId, names) {
   if (!currentUser) throw new Error('請先登入');
-  // 先刪除舊的
-  const { error: deleteError } = await supabase.from('chart_tags').delete().eq('chart_id', chartId);
-  if (deleteError) throw deleteError;
-  if (!tagIds.length) return;
-  const { error } = await supabase.from('chart_tags').insert(
-    tagIds.map(tag_id => ({ chart_id: chartId, tag_id }))
-  );
+  const { error } = await supabase.rpc('set_chart_tags', { target_chart: chartId, tag_names: normalizeTags(names) });
   if (error) throw error;
 }
 
@@ -306,54 +302,17 @@ export async function getMyFavorites({ limit = 20, page = 0 } = {}) {
 // ╚══════════════════════════════════════════════════════════╝
 
 export async function getAllTags() {
-  const { data, error } = await supabase.from('tags').select('*').order('id');
+  const { data, error } = await supabase.rpc('popular_chart_tags');
   if (error) throw error;
   return data;
 }
 
-/**
- * 取得譜面的標籤 + 各標籤投票數
- */
-export async function getChartTagsWithVotes(chartId) {
-  const { data, error } = await supabase
-    .from('chart_tags')
-    .select(`
-      tag_id,
-      tags (id, name, color),
-      vote_count:chart_tag_votes(count)
-    `)
-    .eq('chart_id', chartId);
+export async function searchChartTags(query, limit = 10) {
+  const { data, error } = await supabase.rpc('search_chart_tags', {
+    search_query: query, result_limit: Math.max(1, Math.min(20, limit)),
+  });
   if (error) throw error;
-  return data;
-}
-
-/**
- * 對某標籤 +1 投票 / 取消
- */
-export async function toggleTagVote(chartId, tagId) {
-  if (!currentUser) throw new Error('請先登入');
-
-  const { data: existing, error } = await supabase
-    .from('chart_tag_votes')
-    .select('tag_id')
-    .eq('chart_id', chartId)
-    .eq('tag_id', tagId)
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
-  if (error) throw error;
-
-  if (existing) {
-    const { error } = await supabase.from('chart_tag_votes')
-      .delete()
-      .eq('chart_id', chartId).eq('tag_id', tagId).eq('user_id', currentUser.id);
-    if (error) throw error;
-    return false;
-  } else {
-    const { error } = await supabase.from('chart_tag_votes')
-      .insert({ chart_id: chartId, tag_id: tagId, user_id: currentUser.id });
-    if (error) throw error;
-    return true;
-  }
+  return data || [];
 }
 
 // ╔══════════════════════════════════════════════════════════╗

@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+let timers=new Map(),tick=0;
+function element(){return {children:[],value:'',hidden:true,id:'suggestions',attrs:{},classList:{toggle(){}},replaceChildren(){this.children=[];},append(row){this.children.push(row);},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];},addEventListener(k,fn){this[k]=fn;},focus(){},scrollIntoView(){}};}
+const ctx=vm.createContext({document:{createElement:element},setTimeout:fn=>{timers.set(++tick,fn);return tick;},clearTimeout:id=>timers.delete(id)});
+vm.runInContext(fs.readFileSync('js/chart-tags.js','utf8').replaceAll('export ',''),ctx);
+const container=element(),input=element(),button=element(),hint=element(),dropdown=element();
+const requests=[];let popularCalls=0;
+const editor=ctx.createTagEditor(container,input,button,hint,{dropdown,popular:async()=>{popularCalls++;return [{name:'boss'}];},search:q=>new Promise((resolve,reject)=>requests.push({q,resolve,reject}))});
+async function flush(){for(const fn of timers.values())fn();timers.clear();await Promise.resolve();await Promise.resolve();}
+const key=name=>input.keydown({key:name,preventDefault(){}});
+input.focus();await flush();assert.equal(popularCalls,1);assert.equal(dropdown.children[0].textContent,'boss');
+dropdown.children[0].onclick();assert.deepEqual(Array.from(editor.get()),['boss']);
+input.value='v';input.input();input.value='vo';input.input();input.value='voca';input.input();
+assert.equal(timers.size,1);await flush();assert.equal(requests.length,1);assert.equal(requests[0].q,'voca');
+requests[0].resolve([{name:'vocaloid'},{name:'vocal'},{name:'boss'}]);await flush();
+assert.ok(!dropdown.children.some(row=>row.textContent==='boss'));
+key('ArrowDown');key('ArrowDown');key('ArrowUp');key('Enter');assert.ok(editor.get().includes('vocaloid'));
+input.value='mycustomtag';input.input();await flush();requests[1].resolve([]);await flush();
+assert.equal(dropdown.children[0].textContent,'建立標籤「mycustomtag」');key('Enter');assert.ok(editor.get().includes('mycustomtag'));
+input.value=' TECH ';key('Enter');input.value='tech';key('Enter');assert.equal(editor.get().filter(n=>n==='tech').length,1);
+input.value='x'.repeat(21);key('Enter');assert.match(hint.textContent,/20/);
+input.value='vo';input.input();await flush();input.value='voca';input.input();await flush();
+requests[3].resolve([{name:'vocalnew'}]);await flush();requests[2].resolve([{name:'oldresult'}]);await flush();
+assert.ok(dropdown.children.some(row=>row.textContent==='vocalnew'));assert.ok(!dropdown.children.some(row=>row.textContent==='oldresult'));
+key('Escape');assert.equal(dropdown.hidden,true);assert.equal(input.attrs['aria-expanded'],'false');
+input.value='new';input.input();await flush();key('Escape');requests[4].resolve([{name:'new'}]);await flush();assert.equal(dropdown.hidden,true);
+editor.set(Array.from({length:10},(_,i)=>`tag${i}`));input.value='eleven';key('Enter');assert.equal(editor.get().length,10);assert.equal(button.disabled,true);
+container.children[0].onclick();assert.equal(editor.get().length,9);
+input.value='offline';input.input();await flush();requests[5].reject(new Error('RPC unavailable'));await flush();
+assert.match(hint.textContent,/仍可/);key('Enter');assert.ok(editor.get().includes('offline'));
+console.log('PASS: bounded popular suggestions, click/create/keyboard, selected exclusion, normalization/limits, debounce, stale responses, Escape, RPC failure manual entry. DOM mocked; real mobile/desktop verification pending.');
