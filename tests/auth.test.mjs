@@ -27,6 +27,7 @@ const context = vm.createContext({
   setTimeout(fn) { queued.push(fn); }, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   window: { dispatchEvent(event) { events.push(event); } },
 });
+context.window.location = context.location;
 let source = fs.readFileSync(new URL('../js/auth.js', import.meta.url), 'utf8');
 source = source.replace(/^import .*;\r?\n/m, '').replace(/\bexport /g, '');
 vm.runInContext(source, context);
@@ -75,6 +76,26 @@ await run('loginWithGoogle()'); assert.equal(oauthOptions.provider, 'google');
 callback('SIGNED_IN', {user:{...discordUser, id:'google-again',app_metadata:{provider:'google'},user_metadata:{full_name:'Google Again'}}});
 assert.equal(name.textContent, 'Google Again'); assert.equal(platform.textContent, 'Google 帳號');
 await run('logout()'); while (queued.length) await queued.shift()();
+// Both providers must return to the exact starting page in Pages and local servers.
+for (const startUrl of [
+  'https://azxdxd.github.io/Shit-Chart-Bar/',
+  'https://azxdxd.github.io/Shit-Chart-Bar/index.html',
+  'https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html?id=42&sort=new',
+  'https://azxdxd.github.io/Shit-Chart-Bar/charter_studio.html',
+  'https://azxdxd.github.io/Shit-Chart-Bar/viewer.html?id=42',
+  'http://localhost:5500/',
+  'http://127.0.0.1:5500/chart_detail.html?id=42',
+  'http://127.0.0.1:8080/Shit-Chart-Bar/viewer.html?id=42',
+]) {
+  context.location.href = startUrl;
+  for (const provider of ['Google', 'Discord']) {
+    await run(`loginWith${provider}()`);
+    assert.equal(oauthOptions.provider, provider.toLowerCase());
+    assert.equal(oauthOptions.options.redirectTo, startUrl);
+  }
+}
+context.location.href = 'https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html?id=42&provider_token=old&provider_refresh_token=old&expires_in=3600&expires_at=1&token_type=bearer#access_token=old';
+assert.equal(run('getOAuthRedirectUrl()'), 'https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html?id=42');
 context.location.href = 'file:///index.html'; assert.throws(() => run('getOAuthRedirectUrl()'), /localhost/);
 
 // A fresh page must recover Discord through getSession, without a new login redirect.

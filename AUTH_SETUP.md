@@ -14,12 +14,23 @@ https://azxdxd.github.io/Shit-Chart-Bar/index.html
 https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html
 https://azxdxd.github.io/Shit-Chart-Bar/charter_studio.html
 https://azxdxd.github.io/Shit-Chart-Bar/viewer.html
+https://azxdxd.github.io/Shit-Chart-Bar/**
 http://localhost:5500/**
 http://127.0.0.1:5500/**
 
-正式網址使用精確頁面，本機使用開發用 wildcard。若另用其他連接埠，新增對應網址。
+正式網址的 wildcard 僅限這個 repository 子路徑，涵蓋 chart_detail.html?id=42 等帶查詢參數的返回網址；只加入不含查詢參數的精確頁面不足以涵蓋這些網址。本機 5500 是目前文件與測試使用的 port，沒有另外的伺服器 port 設定。若另用其他連接埠，新增對應網址。
 redirectTo 自動取目前 origin、路徑和查詢參數，保留 GitHub Pages 子目錄與譜面 id。
 不需要額外 callback.html；目前為 Supabase 瀏覽器 implicit flow，SDK 會處理返回網址中的 session。
+
+目前 js/auth.js 原本就使用 getOAuthRedirectUrl()，沒有寫死 localhost。
+若正式登入仍回到 localhost，先確認後台 Site URL 已儲存為上面的正式網址，Redirect URLs 已加入上面的清單。
+Supabase 對不被允許的 redirect_to 會改用 Site URL；前端無法覆寫後台允許清單。
+此 repository 的文件不是後台設定，修改文件不會自動更新 Supabase。
+部署後，Google / Discord 點擊登入時 Console 的 [Auth] OAuth redirectTo 必須是開始登入的正式頁面。
+Network 的 /auth/v1/authorize 請求中 redirect_to 應與之相同（URL 編碼後）。
+若缺少此診斷訊息或 redirect_to 仍是 localhost，確認 Pages 已發布新版 js/auth.js，再強制重新整理。
+若 redirect_to 正確但回到 localhost，檢查同一 Supabase 專案 wnjmtgefhgoshgmxmxbd 的 URL Configuration。
+Google Cloud / Discord Developer Portal 的 callback 仍使用 Supabase /auth/v1/callback，不改成 GitHub Pages。
 
 ## Google Cloud → OAuth Client
 

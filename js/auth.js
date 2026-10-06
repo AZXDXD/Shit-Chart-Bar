@@ -66,10 +66,13 @@ export async function fetchProfile(id) {
 }
 
 export function getOAuthRedirectUrl() {
-  const url = new URL(location.href);
+  // Use the page where login starts in every environment. Keeping pathname
+  // preserves GitHub Pages /Shit-Chart-Bar/ and keeping search preserves chart ids.
+  // Never fall back to a development URL or use origin alone.
+  const url = new URL(window.location.href);
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('請使用 localhost 或正式 HTTPS 網址，不能使用 file:// 開啟網站');
   url.hash = '';
-  for (const key of ['code', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token']) url.searchParams.delete(key);
+  for (const key of ['code', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'token_type', 'expires_in', 'expires_at']) url.searchParams.delete(key);
   return url.href;
 }
 async function login(provider) {
@@ -80,10 +83,12 @@ async function login(provider) {
   const errorEl = document.getElementById('authError');
   if (errorEl) { errorEl.hidden = true; errorEl.style.display = 'none'; }
   try {
+    const redirectTo = getOAuthRedirectUrl();
     console.log('[Auth] signInWithOAuth:', provider);
+    console.log('[Auth] OAuth redirectTo:', redirectTo);
     const { error } = await supabase.auth.signInWithOAuth({ provider,
       // Supabase's Discord provider already requests identify + email.
-      options: { redirectTo: getOAuthRedirectUrl() },
+      options: { redirectTo },
     });
     if (error) throw error;
   } catch (error) {
