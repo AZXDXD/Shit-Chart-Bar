@@ -11,6 +11,7 @@ import {
 } from '../storage.js';
 
 import { inspectPackage } from '../package-validation.js';
+import { renderChartCover } from '../chart-cover.js';
 
 let editingChartId = null; // 目前正在編輯的草稿 ID
 let studioOwner = null;
@@ -328,6 +329,7 @@ async function loadMyCharts() {
 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function renderChartItem(chart) {
+  const cover = renderChartCover(chart);
   chart = { ...chart, title: escapeHtml(chart.title), composer: escapeHtml(chart.composer) };
   const DIFF_STYLE = {
     MASTER:    'background:#4a1a7a;color:#d59fff;border:1px solid #7d3c98;',
@@ -338,7 +340,7 @@ function renderChartItem(chart) {
   const isPublished = chart.status === 'published';
   return `
     <div class="chart-item">
-      <div class="chart-item-cover">🎵</div>
+      <div class="chart-item-cover" style="overflow:hidden;">${cover}</div>
       <div class="chart-item-info">
         <div class="chart-item-title">${chart.title}</div>
         <div class="chart-item-meta">

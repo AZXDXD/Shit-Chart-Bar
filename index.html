@@ -269,6 +269,7 @@
   </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
+<script type="module" src="js/pages/index.js"></script>
 </head>
 <body>
 
@@ -420,13 +421,13 @@
     <div class="search-row">
       <div class="search-input-wrap">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input class="search-input" type="text" placeholder="搜尋曲名、作曲家、譜面師…" />
+        <input id="searchInput" class="search-input" type="text" placeholder="搜尋曲名、作曲家、譜面師…" />
       </div>
-      <select class="sort-select">
-        <option>最新發布</option>
-        <option>評分最高</option>
-        <option>最多下載</option>
-        <option>定數由高至低</option>
+      <select id="sortSelect" class="sort-select">
+        <option value="published_at">最新發布</option>
+        <option value="avg_rating">評分最高</option>
+        <option value="download_count">最多下載</option>
+        <option value="rating_desc">定數由高至低</option>
       </select>
     </div>
     <div class="filter-row">
@@ -440,10 +441,10 @@
       </div>
       <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
       <div class="diff-tags">
-        <button class="diff-tag expert active" onclick="toggleTag(this)">EXPERT</button>
-        <button class="diff-tag master active" onclick="toggleTag(this)">MASTER</button>
-        <button class="diff-tag ultima active" onclick="toggleTag(this)">ULTIMA</button>
-        <button class="diff-tag we active" onclick="toggleTag(this)">WORLD'S END</button>
+        <button class="diff-tag expert" onclick="filterDifficulty(this,'EXPERT')">EXPERT</button>
+        <button class="diff-tag master" onclick="filterDifficulty(this,'MASTER')">MASTER</button>
+        <button class="diff-tag ultima" onclick="filterDifficulty(this,'ULTIMA')">ULTIMA</button>
+        <button class="diff-tag we" onclick="filterDifficulty(this,'WORLDS_END')">WORLD'S END</button>
       </div>
       <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
       <label class="toggle-wrap">
@@ -455,7 +456,7 @@
       </label>
     </div>
     <div style="margin-top:12px;">
-      <div class="topic-tags">
+      <div class="topic-tags" id="topicTags">
         <button class="topic-tag" onclick="toggleTag(this)"># 地力譜</button>
         <button class="topic-tag active" onclick="toggleTag(this)"># 手速考驗</button>
         <button class="topic-tag" onclick="toggleTag(this)"># 配置譜</button>
@@ -473,11 +474,11 @@
 <div class="grid-section">
   <div class="section-header">
     <div class="section-title">所有自製譜面</div>
-    <span class="result-count">共 347 筆</span>
+    <span class="result-count" id="resultCount">載入中…</span>
   </div>
   <div class="chart-grid" id="chartGrid"></div>
   <div class="load-more-wrap">
-    <button class="btn-load-more">載入更多譜面 ↓</button>
+    <button id="loadMoreBtn" class="btn-load-more">載入更多譜面 ↓</button>
   </div>
 </div>
 
@@ -544,49 +545,6 @@ function updateRange(type, val) {
 // ---- Tags ----
 function toggleTag(el) { el.classList.toggle('active'); }
 
-// ---- Chart Cards ----
-const CHARTS = [
-  { title:"Calamity Fortune",   composer:"xi",                       designer:"七瀬",    diff:"MASTER",      rating:"15.0", stars:4.9, votes:412, hasViewer:true,  emoji:"🎸" },
-  { title:"Grievous Lady",      composer:"Team Grimoire",            designer:"あまね",  diff:"ULTIMA",      rating:"14.9", stars:4.8, votes:388, hasViewer:true,  emoji:"🌙" },
-  { title:"Mope Mope",          composer:"LeaF",                     designer:"あゆみん",diff:"EXPERT",      rating:"13.5", stars:4.2, votes:156, hasViewer:false, emoji:"🌸" },
-  { title:"廃墟と楽園",          composer:"Lime",                     designer:"水無月",  diff:"MASTER",      rating:"14.4", stars:4.6, votes:203, hasViewer:true,  emoji:"🏯" },
-  { title:"FLY AWAY",           composer:"朱雀",                     designer:"CHAOS_SQ",diff:"ULTIMA",      rating:"15.2", stars:4.9, votes:501, hasViewer:true,  emoji:"🦅" },
-  { title:"Wind God Girl",      composer:"ZUN",                      designer:"東方組",  diff:"EXPERT",      rating:"13.0", stars:4.3, votes:89,  hasViewer:false, emoji:"🍃" },
-  { title:"ロストワンの号哭",    composer:"Neru feat.鏡音リン",       designer:"lentmiku",diff:"MASTER",      rating:"14.1", stars:4.5, votes:277, hasViewer:true,  emoji:"🎭" },
-  { title:"FREEDOM DiVE↓",     composer:"xi",                       designer:"APEX",    diff:"ULTIMA",      rating:"15.4", stars:5.0, votes:723, hasViewer:true,  emoji:"💎" },
-];
-const DIFF_CLASS = { MASTER:"diff-master", ULTIMA:"diff-ultima", EXPERT:"diff-expert", "WORLD'S END":"diff-we" };
-
-document.getElementById('chartGrid').innerHTML = CHARTS.map(c => `
-  <div class="chart-card">
-    <div class="card-cover">
-      <div class="card-cover-img">${c.emoji}</div>
-      <span class="card-diff-badge ${DIFF_CLASS[c.diff]}">${c.diff} ${c.rating}</span>
-      ${c.hasViewer ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
-      <div class="card-hover-actions">
-        ${c.hasViewer ? '<button class="card-hover-btn">🖼️ 展譜圖</button>' : ''}
-        <button class="card-hover-btn primary">📦 下載</button>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="card-title">${c.title}</div>
-      <div class="card-composer">${c.composer}</div>
-      <div class="card-designer">Chart by <span>${c.designer}</span></div>
-      <div class="card-footer">
-        <div class="card-rating">
-          <span class="stars-sm">★</span>
-          <span class="rating-val">${c.stars}</span>
-          <span style="font-size:11px;color:var(--text-dimmer)">(${c.votes})</span>
-        </div>
-        <div class="card-badges"><span class="badge-zip">📦 ZIP</span></div>
-      </div>
-      <div class="card-stats">
-        <span class="stat">👁️ ${(c.votes*8+120).toLocaleString()}</span>
-        <span class="stat">⬇️ ${(c.votes*3+50).toLocaleString()}</span>
-      </div>
-    </div>
-  </div>
-`).join('');
 </script>
 </body>
 </html>

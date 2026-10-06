@@ -27,7 +27,7 @@ assert.deepEqual(issues,[],'Potential secrets found (values withheld)');
 
 // Check actual HTML structure, not only scripts: a missing wrapper can hide tabs.
 const voidTags=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-for (const file of ['charter_studio.html','chart_detail.html']) {
+for (const file of ['index.html','charter_studio.html','chart_detail.html']) {
   const source=fs.readFileSync(file,'utf8').replace(/<!--[^]*?-->/g,'').replace(/<(script|style)\b[^>]*>[^]*?<\/\1>/gi,'');
   const stack=[];
   for (const match of source.matchAll(/<(\/)?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi)) {

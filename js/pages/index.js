@@ -5,6 +5,7 @@ import { initAuth, requireAuth, currentUser } from '../auth.js';
 import { searchCharts, getAllTags } from '../api.js';
 import { downloadChart } from '../storage.js';
 import { getStorageUrl } from '../supabase.js';
+import { renderChartCover, escapeHtml } from '../chart-cover.js';
 
 // ── 狀態 ─────────────────────────────────────────────────────
 let currentPage   = 0;
@@ -138,9 +139,8 @@ function renderCard(chart) {
     MASTER:'diff-master', ULTIMA:'diff-ultima',
     EXPERT:'diff-expert', WORLDS_END:'diff-we',
   };
-  const coverUrl = chart.cover_url
-    ? `<img src="${chart.cover_url}" alt="${chart.title}" style="width:100%;height:100%;object-fit:cover;transition:transform .4s ease;" onerror="this.style.display='none'">`
-    : `<div style="font-size:48px;display:flex;align-items:center;justify-content:center;height:100%;">🎵</div>`;
+  const coverUrl = `<div class="card-cover-img">${renderChartCover(chart)}</div>`;
+  chart = { ...chart, title: escapeHtml(chart.title), composer: escapeHtml(chart.composer), charter_name: escapeHtml(chart.charter_name) };
 
   const stars = '★'.repeat(Math.round(chart.avg_rating || 0)) +
                 '☆'.repeat(5 - Math.round(chart.avg_rating || 0));
