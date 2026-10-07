@@ -145,7 +145,8 @@
     .sort-select:focus { border-color: var(--orange); }
     .filter-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-label { font-size: 12px; font-weight: 600; color: var(--text-dimmer); white-space: nowrap; }
-    .range-wrap { display: flex; align-items: center; gap: 8px; }
+    [hidden] { display: none !important; }
+    .range-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .range-wrap input[type=range] { -webkit-appearance: none; width: 100px; height: 4px; background: var(--border-bright); border-radius: 2px; outline: none; cursor: pointer; }
     .range-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 8px var(--orange-glow); cursor: pointer; }
     .range-value { font-size: 13px; color: var(--orange-light); font-weight: 700; min-width: 30px; }
@@ -292,16 +293,12 @@
       </select>
     </div>
     <div class="filter-row">
-      <span class="filter-label">定數</span>
-      <div class="range-wrap">
-        <span class="range-value" id="minVal">1.0</span>
-        <input type="range" min="10" max="160" value="10" step="1" oninput="updateRange('min',this.value)">
-        <span style="color:var(--text-dimmer);font-size:12px;">—</span>
-        <input type="range" min="10" max="160" value="160" step="1" oninput="updateRange('max',this.value)">
-        <span class="range-value" id="maxVal">16.0</span>
+      <span class="filter-label" id="constantLabel">定數</span>
+      <div class="range-wrap" id="constantFilters">
+        <label>最低定數 <input id="minVal" type="number" min="1" step="0.1" value="1.0" style="width:90px" onchange="updateRange('min',this.value)"></label><label>最高定數 <input id="maxVal" type="number" min="1" step="0.1" placeholder="無上限" style="width:90px" onchange="updateRange('max',this.value)"></label>
       </div>
       <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
-      <div class="diff-tags">
+      <div id="weFilters" hidden><label>Star Level <select id="weSearchStar" onchange="updateWeSearch()"><option value="">全部</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label><label>WE Attribute <input id="weSearchAttribute" placeholder="文字搜尋" onchange="updateWeSearch()"></label></div><div class="diff-tags">
         <button class="diff-tag basic" onclick="filterDifficulty(this,'BASIC')">BASIC</button>
         <button class="diff-tag advanced" onclick="filterDifficulty(this,'ADVANCED')">ADVANCED</button>
         <button class="diff-tag expert" onclick="filterDifficulty(this,'EXPERT')">EXPERT</button>

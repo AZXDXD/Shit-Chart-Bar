@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import { chartLevel, isWorldsEnd } from '../js/chart-metadata.js';
 const html=fs.readFileSync('chart_detail.html','utf8');
 const ids=new Set(Array.from(html.matchAll(/\bid="([^"]+)"/g),m=>m[1]));
 assert.doesNotMatch(html,/<nav class="breadcrumb"/);
 const source=fs.readFileSync('js/pages/chart-detail.js','utf8')
   .replace(/^import[^;]*;\r?\n/gm,'').replace("await import('./chart-download.js');",'');
 const chartId='588ab3bc-14a4-4cf1-b6f5-b6598371196b';
-async function runCase(difficulty,status,user,error=null) {
+async function runCase(difficulty,status,user,error=null,metadata={},hostname='127.0.0.1') {
   const nodes=new Map(),errors=[],queries=[];
   const make=()=>({style:{},hidden:false,textContent:'',innerHTML:'',value:'',
     classList:{remove(){},toggle(){}},setAttribute(){},append(){},replaceChildren(){},
@@ -19,8 +20,9 @@ async function runCase(difficulty,status,user,error=null) {
   let strip;
   const query={select(){return this;},eq(){return this;},order(){return this;},range:async()=>({data:[],error:null}),maybeSingle:async()=>({data:null,error:null}),
     then(resolve){return Promise.resolve({data:[],count:0,error:null}).then(resolve);}};
-  const ctx=vm.createContext({URL,URLSearchParams,console:{error(...values){errors.push(values);}},
-    location:{search:`?id=${chartId}`,hostname:'127.0.0.1'},currentUser:user,
+  Object.assign(chart,metadata);
+  const ctx=vm.createContext({chartLevel,isWorldsEnd,URL,URLSearchParams,console:{error(...values){errors.push(values);}},
+    location:{search:`?id=${chartId}`,hostname},currentUser:user,
     document:{getElementById:el,querySelector:()=>null,querySelectorAll:()=>[],createElement:make,createTextNode:text=>({textContent:text})},
     window:{addEventListener(){}},initAuth:async()=>{},getChart:async id=>{queries.push(id);if(error)throw error;return chart;},
     getStripViewer:()=>({setSource(value){strip=value;}}),supabase:{from:()=>query},
@@ -33,14 +35,19 @@ async function runCase(difficulty,status,user,error=null) {
   assert.equal(el('chartDetail').hidden,false);assert.equal(el('detailStatus').hidden,true);
   assert.equal(el('chartTitle').textContent,'Real chart');assert.equal(el('creatorName').textContent,'Custom');
   assert.match(el('metadata').innerHTML,new RegExp(difficulty==='WORLDS_END'?'WORLD&#39;S END':difficulty));
+  assert.equal(el('communityConstantCard').hidden,difficulty==='WORLDS_END');
+  if(difficulty==='WORLDS_END' && metadata.we_star_level) assert.ok(el('metadata').innerHTML.includes('★'.repeat(metadata.we_star_level)));
   assert.match(el('chartStats').innerHTML,/下載/);assert.match(el('chartStats').innerHTML,/瀏覽/);
   assert.equal(strip,chart.strip_url);assert.equal(el('favBtn').disabled,false);
   assert.equal(el('packageDownloadBtn').disabled,false);assert.match(el('chartTags').textContent,/尚未設定標籤/);
   assert.match(el('reviewList').textContent,/尚無評論/);assert.deepEqual(errors,[]);
 }
 for(const diff of ['BASIC','ADVANCED','EXPERT','MASTER','ULTIMA','WORLDS_END'])await runCase(diff,'published',null);
+for(const stars of [1,3,5]) await runCase('WORLDS_END','published',null,null,{rating:null,we_star_level:stars,we_attribute:'狂'});
+for(const rating of [14.7,16,16.1,17]) await runCase('MASTER','published',null,null,{rating});
 await runCase('MASTER','draft',{id:'owner'});
 await runCase('MASTER','unpublished',{id:'owner'});
 await runCase('ULTIMA','published',{id:'owner'});
 await runCase('MASTER','published',null,{code:'PGRST116',message:'No visible chart',details:'0 rows',hint:'Check access'});
+await runCase('MASTER','published',null,{code:'PGRST200',message:'Relationship unavailable',details:'schema cache',hint:'Inspect relationship'},{},'production.example');
 console.log('PASS: actual detail page renders all six difficulties with current HTML and absent breadcrumb; guest published/owner draft, UUID, viewer source, stats, tags, reviews, favorite, download controls and error diagnostics. Supabase mocked.');

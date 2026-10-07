@@ -1,3 +1,4 @@
+import { chartLevel, difficultyMetadata, renderWeAttribute } from '../chart-metadata.js';
 import { createTagEditor } from '../chart-tags.js';
 import { searchChartTags, getAllTags } from '../api.js';
 // ============================================================
@@ -207,7 +208,7 @@ async function createDraft() {
     composer:       getVal('songComposer')   || '未知',
     charter_name:   getVal('charterName')    || currentProfile?.charter_name || currentProfile?.username,
     difficulty:     getSelectedDiff(),
-    rating:         parseFloat(document.getElementById('ratingDisplay')?.textContent) || 10.0,
+    ...readDifficultyMetadata(),
     bpm:            parseInt(getVal('songBpm')) || null,
     music_category: getVal('musicCategory')  || 'Original',
     description:    getVal('songDesc')       || null,
@@ -281,7 +282,7 @@ window.publishChart = async function() {
     await updateChart(editingChartId, {
       title: getVal('songTitle'), composer: getVal('songComposer'),
       charter_name: getVal('charterName'), description: getVal('songDesc'),
-      difficulty: getSelectedDiff(), rating: parseFloat(document.getElementById('ratingDisplay').textContent),
+      ...readDifficultyMetadata(),
       music_category: getVal('musicCategory'), bpm: parseInt(getVal('songBpm')) || null,
     });
     // 上傳展譜圖
@@ -323,7 +324,7 @@ window.saveDraft = async function() {
     try { await createDraft(); } catch(e) { showToast(e.message, 'error'); return; }
   }
   if (!getVal('songTitle') || !getVal('songComposer')) throw new Error('請填寫曲名與作曲家');
-  const updates = { title: getVal('songTitle'), composer: getVal('songComposer'), charter_name: getVal('charterName'), description: getVal('songDesc') || null, difficulty: getSelectedDiff(), bpm: parseInt(getVal('songBpm')) || null, rating: parseFloat(document.getElementById('ratingDisplay').textContent), music_category: getVal('musicCategory'), youtube_url: getVal('ytUrl') || null };
+  const updates = { title: getVal('songTitle'), composer: getVal('songComposer'), charter_name: getVal('charterName'), description: getVal('songDesc') || null, ...readDifficultyMetadata(), bpm: parseInt(getVal('songBpm')) || null, music_category: getVal('musicCategory'), youtube_url: getVal('ytUrl') || null };
   if (coverFile) updates.cover_path = await uploadCoverArt(editingChartId, coverFile);
   if (stripFile) updates.strip_path = await uploadChartStrip(editingChartId, stripFile);
   await updateChart(editingChartId, updates);
@@ -372,9 +373,9 @@ function renderChartItem(chart) {
           <span class="status-badge ${isPublished ? 'status-published' : 'status-draft'}">
             ${isPublished ? '● 已發布' : '◌ 草稿'}
           </span>
-          <span class="${DIFF_CLASS[chart.difficulty] || ''}" style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;">
-            ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${chart.rating}
-          </span>
+          <div class="studio-difficulty-stack"><span class="${DIFF_CLASS[chart.difficulty] || ''}" style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;">
+            ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${chartLevel(chart)}
+          </span>${renderWeAttribute(chart)}</div>
           <span>${chart.composer}</span>
         </div>
       </div>
@@ -440,9 +441,10 @@ window.resumeEdit = async function(id) {
   for (const [field,key] of [['songTitle','title'],['songComposer','composer'],['charterName','charter_name'],['songDesc','description'],['songBpm','bpm'],['musicCategory','music_category']]) setVal(field, chart[key] || '');
   setVal('ytUrl', chart.youtube_url || '');
   document.getElementById('coverEditInput').value = '';
-  const slider = document.querySelector('.rating-slider');
-  slider.value = Math.round(chart.rating * 10); window.updateRating(slider.value);
+  setVal('ratingInput', chart.rating ?? ''); window.updateRating(chart.rating ?? '');
+  setVal('weStarLevel', chart.we_star_level ?? ''); setVal('weAttribute', chart.we_attribute ?? '');
   document.querySelectorAll('.diff-opt').forEach(el => el.classList.toggle('selected', el.textContent.trim().replace("WORLD'S END", 'WORLDS_END') === chart.difficulty));
+  syncDifficultyFields();
   await loadTagOptions();
   tagEditor.set((chart.chart_tags || []).map(row => row.tags?.name).filter(Boolean));
   document.querySelector('[onclick="saveDraft()"]').textContent = '儲存變更';
@@ -490,6 +492,10 @@ window.addEventListener('accountNewSubmission', () => {
     for (const field of ['songTitle', 'songComposer', 'songDesc', 'songBpm', 'ytUrl']) setVal(field, '');
     setVal('charterName', getUserDisplayData().name);
     setVal('musicCategory', 'Original');
+    setVal('ratingInput', '15.0'); window.updateRating('15.0');
+    setVal('weStarLevel', '1'); setVal('weAttribute', '');
+    document.querySelectorAll('.diff-opt').forEach(el => el.classList.toggle('selected', el.textContent.trim() === 'MASTER'));
+    syncDifficultyFields();
     document.getElementById('coverEditInput').value = '';
     tagEditor?.set([]);
     window.clearImg();
@@ -502,12 +508,13 @@ window.addEventListener('accountTabChanged', ({ detail: { id } }) => {
 
 window.updateRating = function(v) {
   const el = document.getElementById('ratingDisplay');
-  if(el) el.textContent = (parseInt(v)/10).toFixed(1);
+  if(el) el.textContent = v === '' ? '' : Number(v).toFixed(1);
 };
 
 window.selectDiff = function(el) {
   document.querySelectorAll('.diff-opt').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
+  syncDifficultyFields();
 };
 
 window.toggleTagOpt = function(el) { el.classList.toggle('selected'); };
@@ -515,3 +522,15 @@ window.closeModal = function() { document.getElementById('successModal')?.classL
 
 window.handleOverlayClick = e => { if (e.target.id === 'successModal') window.closeModal(); };
 window.handleCoverChange = input => { coverFile = input.files[0] || null; };
+
+function syncDifficultyFields() {
+  const we = getSelectedDiff() === 'WORLDS_END';
+  document.getElementById('normalMetadata').hidden = we;
+  document.getElementById('weMetadata').hidden = !we;
+  document.getElementById('ratingInput').disabled = we;
+  document.getElementById('weStarLevel').disabled = !we;
+  document.getElementById('weAttribute').disabled = !we;
+}
+function readDifficultyMetadata() {
+  return difficultyMetadata(getSelectedDiff(), getVal('ratingInput'), getVal('weStarLevel'), getVal('weAttribute'));
+}

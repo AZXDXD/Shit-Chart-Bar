@@ -1,3 +1,4 @@
+import { chartLevel, isWorldsEnd } from '../chart-metadata.js';
 import { supabase } from '../supabase.js';
 import { initAuth, currentUser, openLoginModal } from '../auth.js';
 import { getStripViewer } from '../chart-strip-viewer.js';
@@ -11,7 +12,6 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const nameOf = profile => profile?.charter_name || profile?.username || '使用者';
 const date = value => value ? new Date(value).toLocaleString('zh-TW') : '未提供';
 function reportDetailError(stage, error) {
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
   // Keep diagnostics useful without logging sessions, headers or signed URLs.
   console.error(`[chart-detail] ${stage}`, JSON.stringify({
     name: error?.name ?? null, message: error?.message ?? null, code: error?.code ?? null,
@@ -54,12 +54,15 @@ function renderChart() {
   el('category').textContent = chart.music_category || '未分類';
   el('creators').innerHTML = `🎵 作曲家：${esc(chart.composer)}　|　🎼 譜面師：<a class="creator-link" href="#charter">${esc(profile?.charter_name || profile?.username || chart.charter_name || '未提供')}</a>`;
   const diffClass = {BASIC:'diff-basic',ADVANCED:'diff-advanced',MASTER:'diff-master',EXPERT:'diff-expert',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || '';
-  el('metadata').innerHTML = `<span class="diff-badge ${diffClass}">${esc(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${esc(chart.rating)}</span><span class="meta-pill">BPM ${esc(chart.bpm ?? '未提供')}</span><span class="meta-pill">${esc({published:'已發布',draft:'草稿',unpublished:'已下架'}[chart.status] || chart.status)}</span>`;
+  el('metadata').innerHTML = `<span class="diff-badge ${diffClass}">${esc(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${esc(chartLevel(chart))}</span>${isWorldsEnd(chart) ? `<span class="meta-pill">WE Attribute：${esc(chart.we_attribute || '待補')}</span>` : ''}<span class="meta-pill">BPM ${esc(chart.bpm ?? '未提供')}</span><span class="meta-pill">${esc({published:'已發布',draft:'草稿',unpublished:'已下架'}[chart.status] || chart.status)}</span>`;
   el('chartStats').innerHTML = [['⬇️ 下載',chart.download_count ?? 0],['👁️ 瀏覽',chart.view_count ?? 0],['建立',date(chart.created_at)],['發布',chart.published_at ? date(chart.published_at) : '尚未發布'],['更新',date(chart.updated_at)]].map(([label,value])=>`<div class="hero-stat">${label} <strong>${esc(value)}</strong></div>`).join('');
   el('description').textContent = chart.description || '尚未提供描述';
   el('packageSize').textContent = chart.package_size_mb == null ? '未提供檔案大小' : `${chart.package_size_mb} MB`;
   el('packageDownloadBtn').disabled = !chart.package_path || !(chart.status === 'published' || chart.user_id === currentUser?.id);
   el('creatorRating').textContent = chart.rating;
+  el('creatorConstantRow').hidden = isWorldsEnd(chart);
+  el('communityConstantCard').hidden = isWorldsEnd(chart);
+  el('communityConstantHeading').hidden = isWorldsEnd(chart);
   el('creatorName').textContent = profile?.charter_name || profile?.username || chart.charter_name || '未提供';
   el('creatorAvatar').innerHTML = avatar(profile);
   el('creatorVerified').hidden = !profile?.is_verified;
@@ -190,12 +193,12 @@ async function loadTags() {
 }
 async function loadRelated() {
   const charts=await searchCharts({limit:5});
-  el('relatedCharts').innerHTML=charts.filter(row=>row.id!==id).slice(0,4).map(row=>`<a class="rel-card" href="chart_detail.html?id=${encodeURIComponent(row.id)}" style="color:inherit;text-decoration:none"><div class="rel-cover">${row.cover_url?`<img src="${esc(row.cover_url)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'🎵'}</div><div class="rel-body"><div class="rel-title">${esc(row.title)}</div><div class="rel-designer">${esc(row.charter_name)}</div><div class="rel-foot">${esc(row.difficulty)} ${esc(row.rating)}</div></div></a>`).join('') || '目前沒有其他公開譜面';
+  el('relatedCharts').innerHTML=charts.filter(row=>row.id!==id).slice(0,4).map(row=>`<a class="rel-card" href="chart_detail.html?id=${encodeURIComponent(row.id)}" style="color:inherit;text-decoration:none"><div class="rel-cover">${row.cover_url?`<img src="${esc(row.cover_url)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'🎵'}</div><div class="rel-body"><div class="rel-title">${esc(row.title)}</div><div class="rel-designer">${esc(row.charter_name)}</div><div class="rel-foot">${esc(row.difficulty === 'WORLDS_END' ? "WORLD'S END" : row.difficulty)} ${esc(chartLevel(row))}</div></div></a>`).join('') || '目前沒有其他公開譜面';
 }
 el('favBtn').onclick=()=>{if(loginRequired())return;action(el('favBtn'),async()=>{const favorite=await toggleFavorite(id);el('favBtn').classList.toggle('active',favorite);el('favBtn').setAttribute('aria-pressed',String(favorite));el('favText').textContent=favorite?'已收藏':'收藏譜面';message(favorite?'已收藏':'已取消收藏');});};
 el('communitySubmit').onclick=()=>{if(loginRequired())return;action(el('communitySubmit'),async()=>{
   const input=el('cdVoteInput'),rating=Number(input.value);
-  if(!input.value || !input.checkValidity() || rating<1 || rating>16)throw new Error('體感難度請填入 1.0 至 16.0，以 0.1 為單位');
+  if(!input.value || !input.checkValidity() || !Number.isFinite(rating) || rating<1)throw new Error('體感難度請填入至少 1.0 的數字，以 0.1 為單位');
   await submitCommunityRating(id,rating);el('myRating').textContent=`你的體感難度：${rating}`;message('評分已儲存');await refreshCommunity();
 });};
 document.querySelectorAll('[data-star]').forEach(button=>button.onclick=()=>setStars(Number(button.dataset.star)));

@@ -21,15 +21,17 @@ import { normalizeTags } from './chart-tags.js';
  * @param {number}  opts.limit      - 每頁筆數
  */
 export async function searchCharts({
-  query = '', difficulty = null, minRating = 1.0, maxRating = 16.0,
-  sortBy = 'published_at', page = 0, limit = 20, tagId = null,
+  query = '', difficulty = null, minRating = 1.0, maxRating = null,
+  sortBy = 'published_at', page = 0, limit = 20, tagId = null, weStarLevel = null, weAttribute = null,
 } = {}) {
   const { data, error } = await supabase.rpc('search_charts', {
     query,
     tag_filter: tagId,
     diff:        difficulty,
-    min_r:       minRating,
-    max_r:       maxRating,
+    min_r:       difficulty === 'WORLDS_END' ? null : minRating,
+    max_r:       difficulty === 'WORLDS_END' ? null : maxRating,
+    we_star_filter: difficulty === 'WORLDS_END' ? weStarLevel : null,
+    we_attribute_filter: difficulty === 'WORLDS_END' ? weAttribute : null,
     sort_by:     sortBy,
     page_limit:  limit,
     page_offset: page * limit,
@@ -56,9 +58,17 @@ export async function getChart(chartId, { countView = true } = {}) {
 
   // Use only the new unique-view RPC; never fall back to the legacy counter.
   if (countView && currentUser && data.status === 'published') {
-    const { data: count, error: viewError } = await supabase.rpc('record_chart_view', { chart_uuid: chartId });
-    if (!viewError) data.view_count = count;
-    else data.view_notice = '帳號瀏覽記錄未完成：請確認已執行新的 migration，或稍後重試。';
+    try {
+      const { data: count, error: viewError } = await supabase.rpc('record_chart_view', { chart_uuid: chartId });
+      if (viewError) throw viewError;
+      data.view_count = count;
+    } catch (viewError) {
+      console.error('[chart-detail] record_chart_view', {
+        message: viewError?.message, code: viewError?.code,
+        details: viewError?.details, hint: viewError?.hint,
+      });
+      data.view_notice = '帳號瀏覽記錄未完成，請稍後重試。';
+    }
   }
 
   return enrichChart(data);

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import { chartLevel, renderWeAttribute } from '../js/chart-metadata.js';
 const elements=new Map();
 function element(id){
   if(!elements.has(id))elements.set(id,{style:{},innerHTML:'',textContent:'',replaceChildren(){this.innerHTML='';this.textContent='';},insertAdjacentHTML(position,html){this.innerHTML+=html;}});
@@ -8,7 +9,7 @@ function element(id){
 }
 const events={},calls=[];
 let reply;
-const ctx=vm.createContext({console,location:{hash:'#favorites'},currentUser:{id:'a'},
+const ctx=vm.createContext({chartLevel,renderWeAttribute,console,location:{hash:'#favorites'},currentUser:{id:'a'},
   window:{addEventListener(name,fn){events[name]=fn;}},
   document:{addEventListener(){},getElementById:element,querySelectorAll:()=>[]},
   renderChartCover:()=>'',escapeHtml:value=>String(value??''),

@@ -34,9 +34,9 @@ await assert.rejects(()=>apiContext.setChartTags('a',['x'.repeat(21)]));assert.e
 await apiContext.setChartTags('a',[]);assert.equal(calls[1].args.tag_names.length,0);
 await apiContext.searchCharts();
 assert.equal(calls[2].name,'search_charts');
-assert.deepEqual(JSON.parse(JSON.stringify(calls[2].args)),{query:'',tag_filter:null,diff:null,min_r:1,max_r:16,sort_by:'published_at',page_limit:20,page_offset:0});
+assert.deepEqual(JSON.parse(JSON.stringify(calls[2].args)),{query:'',tag_filter:null,diff:null,min_r:1,max_r:null,we_star_filter:null,we_attribute_filter:null,sort_by:'published_at',page_limit:20,page_offset:0});
 await apiContext.searchCharts({query:'高難度',tagId:7,difficulty:'EXPERT',minRating:12,maxRating:14,sortBy:'rating_desc',page:2,limit:5});
-assert.deepEqual(JSON.parse(JSON.stringify(calls[3].args)),{query:'高難度',tag_filter:7,diff:'EXPERT',min_r:12,max_r:14,sort_by:'rating_desc',page_limit:5,page_offset:10});
+assert.deepEqual(JSON.parse(JSON.stringify(calls[3].args)),{query:'高難度',tag_filter:7,diff:'EXPERT',min_r:12,max_r:14,we_star_filter:null,we_attribute_filter:null,sort_by:'rating_desc',page_limit:5,page_offset:10});
 const sql=fs.readFileSync('supabase/migrations/20261006_custom_chart_tags.sql','utf8');
 assert.match(sql,/owner_id IS DISTINCT FROM auth.uid\(\)/);assert.match(sql,/FOR UPDATE/);
 assert.match(sql,/cardinality\(names\)>10/);assert.match(sql,/ON CONFLICT DO NOTHING/);

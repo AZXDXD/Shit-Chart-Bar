@@ -1,3 +1,4 @@
+import { chartLevel, renderWeAttribute } from '../chart-metadata.js';
 // ============================================================
 // js/pages/index.js — 首頁邏輯（接入真實後端）
 // ============================================================
@@ -31,7 +32,8 @@ let currentFilter = {
   tagId: null,
   difficulty: null,
   minRating:  1.0,
-  maxRating:  16.0,
+  maxRating:  null,
+  weStarLevel: null, weAttribute: null,
   sortBy:     'published_at',
 };
 
@@ -189,9 +191,12 @@ function renderCard(chart) {
     <div class="chart-card" onclick="location.href='chart_detail.html?id=${chart.id}'">
       <div class="card-cover">
         ${coverUrl}
+        <div class="worlds-end-overlay">
         <span class="card-diff-badge ${DIFF_CLASS[chart.difficulty] || 'diff-master'}">
-          ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${chart.rating}
+          ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${escapeHtml(chartLevel(chart))}
         </span>
+        ${renderWeAttribute(chart)}
+        </div>
         ${chart.strip_url ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
         <div class="card-hover-actions">
           ${chart.strip_url ? `<button class="card-hover-btn" onclick="event.stopPropagation();location.href='chart_detail.html?id=${chart.id}'">🖼️ 展譜</button>` : ''}
@@ -234,6 +239,12 @@ window.handleDownload = async function(e, chartId) {
 window.filterDifficulty = function(btn, diff) {
   const isActive = btn.classList.toggle('active');
   currentFilter.difficulty = isActive ? diff : null;
+  const we = currentFilter.difficulty === 'WORLDS_END';
+  document.getElementById('constantFilters').hidden = we;
+  document.getElementById('constantLabel').hidden = we;
+  document.getElementById('weFilters').hidden = !we;
+  currentFilter.weStarLevel = we ? Number(document.getElementById('weSearchStar').value) || null : null;
+  currentFilter.weAttribute = we ? document.getElementById('weSearchAttribute').value.trim() || null : null;
   // 互斥：取消其他
   document.querySelectorAll('.diff-tag').forEach(b => {
     if (b !== btn) b.classList.remove('active');
@@ -243,8 +254,10 @@ window.filterDifficulty = function(btn, diff) {
 
 // ── 定數範圍 ─────────────────────────────────────────────────
 window.updateRange = function(type, val) {
-  const v = parseInt(val) / 10;
-  document.getElementById(type === 'min' ? 'minVal' : 'maxVal').textContent = v.toFixed(1);
+  const v = val.trim() === '' ? null : Number(val);
+  if (v !== null && (!Number.isFinite(v) || v < 1)) return;
+  const other = currentFilter[type === 'min' ? 'maxRating' : 'minRating'];
+  if (v !== null && other !== null && (type === 'min' ? v > other : v < other)) return;
   currentFilter[type === 'min' ? 'minRating' : 'maxRating'] = v;
   loadCharts(true);
 };
@@ -298,7 +311,7 @@ async function loadFeatured() {
           <div class="carousel-badge">最新發布</div>
           <div class="carousel-title">${escapeHtml(chart.title)}</div>
           <div class="carousel-meta">${escapeHtml(chart.composer)} · Chart by ${escapeHtml(chart.charter_name)}</div>
-          <div class="carousel-details"><span class="difficulty-badge ${{BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || ''}">${escapeHtml(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${escapeHtml(chart.rating)}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
+          <div class="carousel-details"><span class="difficulty-badge ${{BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || ''}">${escapeHtml(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${escapeHtml(chartLevel(chart))}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
           <div class="carousel-tags">${tags}${extraTags>0?`<span class="carousel-tag">+${extraTags}</span>`:''}</div>
         </div><div class="carousel-actions"><a class="btn-viewer" href="${detailUrl}">查看譜面詳情</a><button class="btn-dl" data-chart-id="${escapeHtml(chart.id)}">📦 下載遊玩包</button></div></div>
       </div>`;
@@ -309,3 +322,9 @@ async function loadFeatured() {
     if(featuredCount>1)setInterval(()=>window.nextSlide(),4500);
   } catch {track.textContent='譜面載入失敗';}
 }
+
+window.updateWeSearch = function() {
+ currentFilter.weStarLevel = Number(document.getElementById('weSearchStar').value) || null;
+ currentFilter.weAttribute = document.getElementById('weSearchAttribute').value.trim() || null;
+ loadCharts(true);
+};

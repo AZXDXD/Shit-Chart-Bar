@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { chartLevel, renderWeAttribute } from '../js/chart-metadata.js';
 
 const track={style:{},innerHTML:'',querySelectorAll:()=>[]};
 const dots={innerHTML:''};
@@ -9,7 +10,7 @@ const charts=[
   {id:'uuid-b',title:'Second',composer:'B',charter_name:'Beta',difficulty:'EXPERT',rating:12,cover_url:null},
 ];
 const slides=charts.map(()=>({setAttribute(){}}));
-const context=vm.createContext({URL,console,window:{addEventListener(){}},setInterval(){},
+const context=vm.createContext({chartLevel,renderWeAttribute,URL,console,window:{addEventListener(){}},setInterval(){},
   document:{addEventListener(){},getElementById:id=>id==='carouselTrack'?track:dots,
     querySelectorAll:selector=>selector.includes('carousel-slide')?slides:[]},
   searchCharts:async()=>charts,
