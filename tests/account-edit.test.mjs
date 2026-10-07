@@ -24,6 +24,7 @@ const ctx = vm.createContext({currentUser:{id:'owner'},supabase:{from:()=>({upda
 vm.runInContext(api.replace(/^import .*;\r?\n/gm,'').replaceAll('export ',''),ctx);
 await assert.rejects(vm.runInContext("updateChart('chart',{status:'draft'})",ctx));
 const html = fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('href="charter_studio.html#profile"'));
-assert.ok(html.includes('</a><button class="btn-login" onclick="event.stopPropagation();logout()"'));
+assert.ok(html.includes('class="header-account"'));
+assert.ok(!html.includes('data-account-link'));
+assert.ok(fs.readFileSync('js/site-header.js','utf8').includes('href="charter_studio.html#profile"'));
 console.log('PASS: Google/Discord provider avatar, custom avatar precedence, actual edit save preserves published/draft, BPM/rating/difficulty/tag clearing, status API guard, account link and isolated logout. Mocked persistence; live OAuth/RLS not tested.');

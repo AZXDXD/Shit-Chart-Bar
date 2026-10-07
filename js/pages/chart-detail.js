@@ -10,6 +10,14 @@ const el = name => document.getElementById(name);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nameOf = profile => profile?.charter_name || profile?.username || '使用者';
 const date = value => value ? new Date(value).toLocaleString('zh-TW') : '未提供';
+function reportDetailError(stage, error) {
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
+  // Keep diagnostics useful without logging sessions, headers or signed URLs.
+  console.error(`[chart-detail] ${stage}`, JSON.stringify({
+    name: error?.name ?? null, message: error?.message ?? null, code: error?.code ?? null,
+    details: error?.details ?? null, hint: error?.hint ?? null, stack: error?.stack ?? null,
+  }));
+}
 function safeUrl(value) {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : ''; } catch { return ''; }
 }
@@ -43,11 +51,10 @@ function renderChart() {
   if(chart.view_notice)message(chart.view_notice);
   el('chartTitle').textContent = chart.title;
   document.title = `${chart.title} — 大份吧`;
-  document.querySelector('.breadcrumb span:last-child').textContent = chart.title;
   el('category').textContent = chart.music_category || '未分類';
   el('creators').innerHTML = `🎵 作曲家：${esc(chart.composer)}　|　🎼 譜面師：<a class="creator-link" href="#charter">${esc(profile?.charter_name || profile?.username || chart.charter_name || '未提供')}</a>`;
-  const diffClass = {MASTER:'diff-master',EXPERT:'diff-expert',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || '';
-  el('metadata').innerHTML = `<span class="diff-badge ${diffClass}">${esc(chart.difficulty)} ${esc(chart.rating)}</span><span class="meta-pill">BPM ${esc(chart.bpm ?? '未提供')}</span><span class="meta-pill">${esc({published:'已發布',draft:'草稿',unpublished:'已下架'}[chart.status] || chart.status)}</span>`;
+  const diffClass = {BASIC:'diff-basic',ADVANCED:'diff-advanced',MASTER:'diff-master',EXPERT:'diff-expert',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || '';
+  el('metadata').innerHTML = `<span class="diff-badge ${diffClass}">${esc(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${esc(chart.rating)}</span><span class="meta-pill">BPM ${esc(chart.bpm ?? '未提供')}</span><span class="meta-pill">${esc({published:'已發布',draft:'草稿',unpublished:'已下架'}[chart.status] || chart.status)}</span>`;
   el('chartStats').innerHTML = [['⬇️ 下載',chart.download_count ?? 0],['👁️ 瀏覽',chart.view_count ?? 0],['建立',date(chart.created_at)],['發布',chart.published_at ? date(chart.published_at) : '尚未發布'],['更新',date(chart.updated_at)]].map(([label,value])=>`<div class="hero-stat">${label} <strong>${esc(value)}</strong></div>`).join('');
   el('description').textContent = chart.description || '尚未提供描述';
   el('packageSize').textContent = chart.package_size_mb == null ? '未提供檔案大小' : `${chart.package_size_mb} MB`;
@@ -208,7 +215,7 @@ async function authChanged() {
     const updated=await getChart(id,{countView:!!currentUser});
     if(revision!==authRevision)return;
     chart=updated;renderChart();
-  } catch {if(revision===authRevision)fail('找不到此譜面，或目前沒有權限查看。');return;}
+  } catch(error) {reportDetailError('authChanged',error);if(revision===authRevision)fail('找不到此譜面，或目前沒有權限查看。');return;}
   const results=await Promise.allSettled([refreshPersonal(),loadTags(),loadReviews()]);
   if(results.some(result=>result.status==='rejected'))message('部分資料更新失敗，請重新整理後再試。');
 }
@@ -217,19 +224,22 @@ window.addEventListener('authLogout',authChanged);
 window.addEventListener('chartDownloadStatsFailed',()=>message('已開始下載，但下載統計記錄失敗。'));
 window.addEventListener('chartDownloaded',async event=>{
   if (!chart || event.detail.chartId !== id) return;
-  try { chart=await getChart(id,{countView:false});renderChart(); } catch { message('下載後資料更新失敗，請重新整理。'); }
+  try { chart=await getChart(id,{countView:false});renderChart(); } catch(error) { reportDetailError('downloadRefresh',error);message('下載後資料更新失敗，請重新整理。'); }
 });
 await initAuth();
 if(!id)fail('請從譜面列表選擇要查看的譜面。');
 else if(!uuid.test(id))fail('譜面連結格式不正確。');
 else {
+  let stage = 'getChart';
   try {
     let revision=authRevision, loaded=await getChart(id);
     while(revision!==authRevision) {revision=authRevision;loaded=await getChart(id);}
+    stage='renderChart';
     chart=loaded;renderChart();el('detailStatus').hidden=true;el('chartDetail').hidden=false;
     const results=await Promise.allSettled([refreshPersonal(),refreshCommunity(),reviewOverview(),loadReviews(),loadTags(),loadRelated()]);
     results.forEach((result,index)=>{if(result.status==='rejected') {
+      reportDetailError(['personal','communityRatings','reviewOverview','reviews','tags','relatedCharts'][index],result.reason);
       const target=['actionMessage','communityCount','reviewCount','reviewList','chartTags','relatedCharts'][index];el(target).textContent='資料載入失敗，請重新整理後重試。';
     }});
-  } catch(error) {fail(error.code==='PGRST116'?'找不到此譜面，或目前沒有權限查看。':'譜面載入失敗，請稍後重新整理再試。');}
+  } catch(error) {reportDetailError(stage,error);fail(error.code==='PGRST116'?'找不到此譜面，或目前沒有權限查看。':'譜面載入失敗，請稍後重新整理再試。');}
 }

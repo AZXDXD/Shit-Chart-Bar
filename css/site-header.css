@@ -1,0 +1,19 @@
+header { justify-content: flex-start; gap: 12px; }
+header > .logo, header > .header-brand { margin-right: auto; min-width: 0; }
+.site-menu { position: relative; flex: 0 0 auto; }
+.site-menu summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #3a3a60; border-radius: 8px; color: #eaeaf0; font-size: 20px; line-height: 1; }
+.site-menu summary::-webkit-details-marker { display: none; }
+.site-menu summary:focus-visible, .site-menu-panel :focus-visible { outline: 2px solid #ffa040; outline-offset: 2px; }
+header .site-menu-panel { display: flex; flex-direction: column; align-items: stretch; gap: 0; position: absolute; right: 0; top: calc(100% + 10px); width: min(220px, calc(100vw - 32px)); max-height: calc(100dvh - 88px); overflow-y: auto; padding: 6px; border: 1px solid #3a3a60; border-radius: 12px; background: #13131f; box-shadow: 0 12px 32px #0008; z-index: 500; }
+.site-menu:not([open]) .site-menu-panel { display: none; }
+header .site-menu-panel a, header .site-menu-panel button { display: block; width: 100%; padding: 12px; border: 0; border-radius: 6px; background: transparent; color: #eaeaf0; font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; }
+header .site-menu-panel a:hover, header .site-menu-panel button:hover { background: #ffffff12; color: #ffa040; }
+.header-account { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 220px; cursor: default; }
+.header-account img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.header-account [data-user="name"] { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 500px) {
+  header { padding-left: 12px; padding-right: 12px; gap: 8px; }
+  .header-account { max-width: 100px; }
+  header .logo-text { font-size: 16px; }
+  header .breadcrumb { display: none; }
+}

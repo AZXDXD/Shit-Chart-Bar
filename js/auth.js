@@ -120,7 +120,6 @@ export async function logout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     applySession(null);
-    document.getElementById('userDropdown')?.classList.remove('open');
   } catch (error) {
     console.error('[Auth] signOut:', error);
     showAuthError('登出失敗：' + error.message);

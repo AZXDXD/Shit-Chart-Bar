@@ -2,7 +2,7 @@
 // js/pages/index.js — 首頁邏輯（接入真實後端）
 // ============================================================
 import { initAuth, requireAuth, currentUser } from '../auth.js';
-import { searchCharts, getAllTags } from '../api.js';
+import { searchCharts, getAllTags, getMyFavorites } from '../api.js';
 import { downloadChart } from '../storage.js';
 import { supabase } from '../supabase.js';
 import { renderChartCover, escapeHtml } from '../chart-cover.js';
@@ -12,6 +12,20 @@ let currentPage   = 0;
 let isLoading     = false;
 let hasMore       = true;
 let pendingReset  = false;
+let favoritesMode = false;
+function updateListMode() {
+  favoritesMode = location.hash === '#favorites';
+  document.getElementById('searchSection').hidden = favoritesMode;
+  document.getElementById('chartSectionTitle').textContent = favoritesMode ? '已收藏譜面' : '所有自製譜面';
+}
+window.addEventListener('hashchange', () => { updateListMode(); loadCharts(true); });
+window.addEventListener('authLogin', () => { if (favoritesMode) loadCharts(true); });
+window.addEventListener('authLogout', () => {
+  if (favoritesMode) {
+    document.getElementById('chartGrid').replaceChildren();
+    loadCharts(true);
+  }
+});
 let currentFilter = {
   query:      '',
   tagId: null,
@@ -24,6 +38,7 @@ let currentFilter = {
 // ── 初始化 ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();
+  updateListMode();
   await Promise.all([loadTags(), loadCharts(true), loadFeatured()]);
 
   // 搜尋框 debounce
@@ -85,6 +100,16 @@ async function loadCharts(reset = false) {
   }
 
   const grid = document.getElementById('chartGrid');
+  const requestedFavorites = favoritesMode;
+  const requestedUser = currentUser?.id;
+  if (favoritesMode && !currentUser) {
+    grid.textContent = '請從右上選單登入帳號以查看收藏譜面';
+    document.getElementById('resultCount').textContent = '';
+    document.getElementById('loadMoreBtn').style.display = 'none';
+    isLoading = false;
+    pendingReset = false;
+    return;
+  }
 
   // Skeleton loading cards
   if (reset) {
@@ -100,16 +125,20 @@ async function loadCharts(reset = false) {
   }
 
   try {
-    const charts = await searchCharts({
+    const charts = await (favoritesMode ? getMyFavorites({page:currentPage,limit:20}) : searchCharts({
       ...currentFilter,
       page:  currentPage,
       limit: 20,
-    });
+    }));
+    // Discard responses from another route/account before showing any cards.
+    if (requestedFavorites !== favoritesMode || (requestedFavorites && requestedUser !== currentUser?.id)) {
+      isLoading = false; pendingReset = false; loadCharts(true); return;
+    }
 
     if (reset) grid.innerHTML = '';
 
     if (charts.length === 0 && reset) {
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dimmer);">沒有找到符合條件的譜面</div>`;
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dimmer);">${favoritesMode ? '目前沒有已收藏譜面' : '沒有找到符合條件的譜面'}</div>`;
       document.getElementById('resultCount').textContent = '0 筆';
       document.getElementById('loadMoreBtn').style.display = 'none';
       isLoading = false;
@@ -130,7 +159,13 @@ async function loadCharts(reset = false) {
     }
   } catch(e) {
     console.error('loadCharts:', e);
-    if (reset) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#ef4444;">載入失敗：${escapeHtml(e.message)}</div>`;
+    if (reset) {
+      const message = /invalid input value for enum difficulty_type/.test(e.message)
+        ? '此難度尚未啟用，請稍後再試' : `載入失敗：${e.message}`;
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:#ef4444;">${escapeHtml(message)}</div>`;
+      document.getElementById('resultCount').textContent = '';
+      document.getElementById('loadMoreBtn').style.display = 'none';
+    }
   }
 
   isLoading = false;
@@ -140,6 +175,7 @@ async function loadCharts(reset = false) {
 // ── 渲染卡片 HTML ─────────────────────────────────────────────
 function renderCard(chart) {
   const DIFF_CLASS = {
+    BASIC:'diff-basic', ADVANCED:'diff-advanced',
     MASTER:'diff-master', ULTIMA:'diff-ultima',
     EXPERT:'diff-expert', WORLDS_END:'diff-we',
   };
@@ -154,7 +190,7 @@ function renderCard(chart) {
       <div class="card-cover">
         ${coverUrl}
         <span class="card-diff-badge ${DIFF_CLASS[chart.difficulty] || 'diff-master'}">
-          ${chart.difficulty} ${chart.rating}
+          ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${chart.rating}
         </span>
         ${chart.strip_url ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
         <div class="card-hover-actions">
@@ -262,7 +298,7 @@ async function loadFeatured() {
           <div class="carousel-badge">最新發布</div>
           <div class="carousel-title">${escapeHtml(chart.title)}</div>
           <div class="carousel-meta">${escapeHtml(chart.composer)} · Chart by ${escapeHtml(chart.charter_name)}</div>
-          <div class="carousel-details"><span class="difficulty-badge">${escapeHtml(chart.difficulty)} ${escapeHtml(chart.rating)}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
+          <div class="carousel-details"><span class="difficulty-badge ${{BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || ''}">${escapeHtml(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${escapeHtml(chart.rating)}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
           <div class="carousel-tags">${tags}${extraTags>0?`<span class="carousel-tag">+${extraTags}</span>`:''}</div>
         </div><div class="carousel-actions"><a class="btn-viewer" href="${detailUrl}">查看譜面詳情</a><button class="btn-dl" data-chart-id="${escapeHtml(chart.id)}">📦 下載遊玩包</button></div></div>
       </div>`;

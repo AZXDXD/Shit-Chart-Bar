@@ -237,7 +237,7 @@ async function createDraft() {
 
 function getSelectedDiff() {
   const el = document.querySelector('.diff-opt.selected');
-  const map = { EXPERT:'EXPERT', MASTER:'MASTER', ULTIMA:'ULTIMA', "WORLD'S END":'WORLDS_END' };
+  const map = { BASIC:'BASIC', ADVANCED:'ADVANCED', EXPERT:'EXPERT', MASTER:'MASTER', ULTIMA:'ULTIMA', "WORLD'S END":'WORLDS_END' };
   return map[el?.textContent?.trim()] || 'MASTER';
 }
 
@@ -361,12 +361,7 @@ function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c =>
 function renderChartItem(chart) {
   const cover = renderChartCover(chart);
   chart = { ...chart, title: escapeHtml(chart.title), composer: escapeHtml(chart.composer) };
-  const DIFF_STYLE = {
-    MASTER:    'background:#4a1a7a;color:#d59fff;border:1px solid #7d3c98;',
-    ULTIMA:    'background:#1a1a1a;color:#aaa;border:1px solid #555;',
-    EXPERT:    'background:#5a0a0a;color:#ff9999;border:1px solid #c0392b;',
-    WORLDS_END:'background:#2a1a2a;color:#e8d5f5;border:1px solid #c8a8e0;',
-  };
+  const DIFF_CLASS = {BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'};
   const isPublished = chart.status === 'published';
   return `
     <div class="chart-item">
@@ -377,8 +372,8 @@ function renderChartItem(chart) {
           <span class="status-badge ${isPublished ? 'status-published' : 'status-draft'}">
             ${isPublished ? '● 已發布' : '◌ 草稿'}
           </span>
-          <span style="${DIFF_STYLE[chart.difficulty]};padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;">
-            ${chart.difficulty} ${chart.rating}
+          <span class="${DIFF_CLASS[chart.difficulty] || ''}" style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;">
+            ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${chart.rating}
           </span>
           <span>${chart.composer}</span>
         </div>
@@ -518,6 +513,5 @@ window.selectDiff = function(el) {
 window.toggleTagOpt = function(el) { el.classList.toggle('selected'); };
 window.closeModal = function() { document.getElementById('successModal')?.classList.remove('open'); };
 
-window.toggleDropdown = () => document.getElementById('userDropdown')?.classList.toggle('open');
 window.handleOverlayClick = e => { if (e.target.id === 'successModal') window.closeModal(); };
 window.handleCoverChange = input => { coverFile = input.files[0] || null; };

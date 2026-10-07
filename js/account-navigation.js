@@ -22,9 +22,6 @@
     history.pushState(null, '', location.pathname + location.search + '#' + id);
     renderTab(id);
   };
-  document.querySelectorAll('[data-account-link]').forEach(el => {
-    el.href = new URL('charter_studio.html#profile', location.href).href;
-  });
   if (!document.getElementById('page-profile')) return;
   window.addEventListener('hashchange', readTab);
   readTab();

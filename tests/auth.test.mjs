@@ -121,7 +121,9 @@ for (const file of ['index.html', 'chart_detail.html', 'charter_studio.html']) {
   assert.equal((html.match(/src="js\/login-controls.js"/g) || []).length, 1, file + ': exactly one click entry point');
   assert.match(html, /data-oauth="google" onclick="loginWithGoogle\(\)"/);
   assert.match(html, /data-oauth="discord" onclick="loginWithDiscord\(\)"/);
-  assert.match(html, /data-auth="guest"/); assert.match(html, /data-auth="user"/); assert.match(html, /logout\(\)/);
+  assert.match(html, /data-auth="user"/);
+  const header = fs.readFileSync(new URL('../js/site-header.js', import.meta.url), 'utf8');
+  assert.match(header, /data-auth="guest"/); assert.match(header, /data-auth="user"/); assert.match(header, /logout\(\)/);
   for (const script of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(script[1], { filename: file });
 }
 const config = fs.readFileSync(new URL('../js/supabase.js', import.meta.url), 'utf8');

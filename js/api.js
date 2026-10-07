@@ -13,7 +13,7 @@ import { normalizeTags } from './chart-tags.js';
  * 搜尋 / 列表譜面（呼叫 search_charts RPC）
  * @param {Object} opts
  * @param {string}  opts.query      - 關鍵字
- * @param {string}  opts.difficulty - 'EXPERT'|'MASTER'|'ULTIMA'|'WORLDS_END'|null
+ * @param {string}  opts.difficulty - 'BASIC'|'ADVANCED'|'EXPERT'|'MASTER'|'ULTIMA'|'WORLDS_END'|null
  * @param {number}  opts.minRating  - 最小定數
  * @param {number}  opts.maxRating  - 最大定數
  * @param {string}  opts.sortBy     - 'published_at'|'avg_rating'|'download_count'|'rating_desc'
@@ -289,12 +289,12 @@ export async function getMyFavorites({ limit = 20, page = 0 } = {}) {
   if (!currentUser) return [];
   const { data, error } = await supabase
     .from('favorites')
-    .select('chart_id, created_at, charts (*)')
+    .select('chart_id, created_at, charts!inner (*)')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false })
     .range(page * limit, (page + 1) * limit - 1);
   if (error) throw error;
-  return data.map(f => enrichChart(f.charts));
+  return data.filter(f => f.charts).map(f => enrichChart(f.charts));
 }
 
 // ╔══════════════════════════════════════════════════════════╗

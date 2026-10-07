@@ -1,0 +1,12 @@
+.diff-basic, .diff-tag.basic, .diff-opt.basic { background: #173d2b; color: #a0dfb7; border: 1px solid #38835a; }
+.diff-advanced, .diff-tag.advanced, .diff-opt.advanced { background: #49321c; color: #ffc88c; border: 1px solid #aa703c; }
+.diff-tag.basic.active, .diff-opt.basic.selected { background: #285b3f; border-color: #80d69f; box-shadow: 0 0 0 1px #80d69f; }
+.diff-tag.advanced.active, .diff-opt.advanced.selected { background: #694722; border-color: #ffc88c; box-shadow: 0 0 0 1px #ffc88c; }
+.diff-we, .diff-tag.we, .diff-opt.we { color: #fff; background: linear-gradient(110deg, #74363d, #78572d, #336748, #345f78, #604374); border: 1px solid #c7b2dd; }
+.diff-tag.we:hover, .diff-opt.we:hover { border-color: #fff; }
+.diff-tag.we.active, .diff-opt.we.selected { background: linear-gradient(110deg, #934750, #93713c, #44875f, #437d9d, #805996); border-color: #fff; box-shadow: 0 0 0 2px #d9c5ee; }
+.diff-tag:focus-visible, .diff-opt:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.diff-basic, .diff-advanced, .diff-we { white-space: nowrap; }
+.diff-expert { background: #5a0a0a; color: #ff9999; border: 1px solid #c0392b; }
+.diff-master { background: #4a1a7a; color: #d59fff; border: 1px solid #7d3c98; }
+.diff-ultima { background: #1a1a1a; color: #aaa; border: 1px solid #555; }

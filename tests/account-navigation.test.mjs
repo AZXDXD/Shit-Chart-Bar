@@ -14,7 +14,8 @@ for (const hash of ['', '#invalid', '#profile', '#manage', '#upload']) {
 }
 for (const page of ['index.html','chart_detail.html','charter_studio.html']) {
   const html=fs.readFileSync(page,'utf8');
-  assert.ok(html.includes('data-account-link href="charter_studio.html#profile"'));
+  assert.ok(html.includes('src="js/site-header.js"'));
+  assert.ok(!html.includes('data-account-link'));
   assert.equal((html.match(/src="js\/account-navigation.js"/g)||[]).length,1);
 }
 console.log('PASS: navigation without auth/modules, fallback, every tab, history/hash restore, shared header links.');

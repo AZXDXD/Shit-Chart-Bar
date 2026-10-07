@@ -73,44 +73,6 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       letter-spacing: 1px;
     }
-    nav { display: flex; align-items: center; gap: 4px; }
-    nav a {
-      color: var(--text-dim); text-decoration: none;
-      padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 500;
-      transition: all 0.2s; white-space: nowrap;
-    }
-    nav a:hover { color: var(--text); background: rgba(255,255,255,0.07); }
-    nav a.active { color: var(--orange-light); }
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    .btn-submit {
-      background: linear-gradient(135deg, var(--orange) 0%, #e05500 100%);
-      color: #fff; border: none; cursor: pointer;
-      padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 700;
-      box-shadow: 0 0 16px var(--orange-glow); transition: all 0.2s; white-space: nowrap;
-    }
-    .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 0 24px var(--orange-glow), 0 4px 12px rgba(0,0,0,0.4); }
-    .btn-login {
-      background: transparent; color: var(--text-dim);
-      border: 1px solid var(--border-bright); cursor: pointer;
-      padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s;
-    }
-    .btn-login:hover { color: var(--text); border-color: var(--text-dim); }
-    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
-    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text-dim); border-radius: 2px; transition: all 0.3s; }
-
-    /* ===== MOBILE DRAWER ===== */
-    .drawer-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
-    .drawer-overlay.open { display: block; }
-    .drawer {
-      position: fixed; top: 0; right: -280px; bottom: 0; width: 260px; z-index: 201;
-      background: var(--bg2); border-left: 1px solid var(--border);
-      padding: 24px 20px; display: flex; flex-direction: column; gap: 8px; transition: right 0.3s ease;
-    }
-    .drawer.open { right: 0; }
-    .drawer-close { align-self: flex-end; background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; margin-bottom: 8px; }
-    .drawer a { color: var(--text-dim); text-decoration: none; padding: 12px 16px; border-radius: 8px; font-size: 15px; font-weight: 500; transition: all 0.2s; }
-    .drawer a:hover { color: var(--text); background: rgba(255,255,255,0.07); }
-
     /* ===== MODAL ===== */
     .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
@@ -153,7 +115,6 @@
     .diff-master { background: #4a1a7a; color: #d59fff; border: 1px solid #7d3c98; }
     .diff-ultima { background: #1a1a1a; color: #aaa;    border: 1px solid #555; }
     .diff-expert { background: #5a0a0a; color: #ff9999; border: 1px solid #c0392b; }
-    .diff-we     { background: #2a1a2a; color: var(--worlds-end); border: 1px solid #c8a8e0; }
     .carousel-rating { display: flex; align-items: center; gap: 6px; }
     .stars { color: #ffd700; font-size: 14px; letter-spacing: 1px; }
     .carousel-actions { display: flex; gap: 10px; flex-wrap: wrap; max-width: 100%; }
@@ -196,8 +157,6 @@
     .diff-tag.master.active { background: rgba(125,60,152,0.4); border-color: #7d3c98; }
     .diff-tag.ultima { background: rgba(80,80,80,0.15); color: #aaa; border-color: rgba(80,80,80,0.4); }
     .diff-tag.ultima.active { background: rgba(80,80,80,0.4); border-color: #666; }
-    .diff-tag.we { background: rgba(200,168,224,0.1); color: var(--worlds-end); border-color: rgba(200,168,224,0.3); }
-    .diff-tag.we.active { background: rgba(200,168,224,0.25); border-color: #c8a8e0; }
     .topic-tags { display: flex; gap: 6px; flex-wrap: wrap; }
     .topic-tag { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-dim); transition: all 0.2s; }
     .topic-tag:hover { border-color: var(--orange); color: var(--orange-light); }
@@ -261,8 +220,6 @@
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1100px) { .chart-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 840px) {
-      nav { display: none; }
-      .hamburger { display: flex; }
       .carousel-wrap { height: 300px; margin: 16px 16px 0; }
       .carousel-content { padding: 16px 48px 36px; flex-direction: column; align-items: stretch; gap: 10px; }
       .carousel-info { flex: none; }
@@ -277,61 +234,30 @@
       .search-section, .grid-section { padding-left: 16px; padding-right: 16px; }
     }
     @media (max-width: 500px) {
-      .header-right .btn-submit { display: none; }
       .carousel-wrap { height: 280px; }
       .carousel-content { padding-left: 38px; padding-right: 38px; }
       .carousel-title { font-size: 16px; }
     }
     @media (prefers-reduced-motion: reduce) { .carousel-track, .carousel-bg { transition: none; } }
-  .account-link:hover { opacity:.8; }
-.account-link:focus-visible { outline:2px solid var(--orange); outline-offset:4px; }
-.account-link { display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer; }
-.account-link:hover { opacity:.8; }
-.account-link:focus-visible { outline:2px solid var(--orange);outline-offset:4px; }
 </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
 <script type="module" src="js/pages/index.js"></script>
 <link rel="stylesheet" href="css/brand-logo.css" />
+<link rel="stylesheet" href="css/site-header.css">
+<link rel="stylesheet" href="css/difficulty.css">
+<script defer src="js/site-header.js"></script>
 </head>
 <body>
 
 <!-- ===== HEADER ===== -->
-<header>
-  <a class="logo" href="index.html" aria-label="大份吧首頁">
+<header><a class="logo" href="index.html" aria-label="大份吧首頁">
     <img class="brand-logo" src="assets/logo_daifenba.png" alt="" width="48" height="48" />
     <span class="logo-text">大份吧</span>
-  </a>
-  <nav>
-    <a href="#" class="active">探索譜面</a>
-    <a href="#">工具與教學</a>
-  </nav>
-  <div class="header-right">
-    <button class="btn-submit" onclick="requireAuth(() => location.href='charter_studio.html#upload')">✦ 投稿自製譜</button>
-    <button class="btn-login" data-auth="guest" onclick="openModal()">登入 / 註冊</button><span data-auth="user" style="display:none;align-items:center;gap:8px;max-width:220px;">
-  <a class="account-link" data-account-link href="charter_studio.html#profile" aria-label="我的帳號" style="display:inline-flex;align-items:center;gap:8px;min-width:0;color:inherit;text-decoration:none;cursor:pointer;"><img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none;width:28px;height:28px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
-  <span data-user="name" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-  </a><button class="btn-login" onclick="event.stopPropagation();logout()">登出</button>
-</span>
-    <div class="hamburger" onclick="openDrawer()">
-      <span></span><span></span><span></span>
-    </div>
-  </div>
-</header>
-
-<!-- ===== MOBILE DRAWER ===== -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-<div class="drawer" id="drawer">
-  <button class="drawer-close" onclick="closeDrawer()">✕</button>
-  <a href="#">🎵 探索譜面</a>
-  <a href="#">🛠️ 工具與教學</a>
-  <button class="btn-submit" onclick="closeDrawer();requireAuth(() => location.href='charter_studio.html');" style="margin-top:8px;">✦ 投稿自製譜</button>
-  <button class="btn-login" data-auth="guest" onclick="closeDrawer();openLoginModal();" style="margin-top:6px;">登入 / 註冊</button>
-<div data-auth="user" style="display:none;margin-top:6px;">
-  <span data-user="name" style="font-size:13px;"></span>
-  <button class="btn-login" onclick="closeDrawer();logout()">登出</button>
-</div>
-</div>
+  </a><span class="header-account" data-auth="user" style="display:none">
+  <img data-user="avatar" alt="使用者頭像" referrerpolicy="no-referrer" style="display:none" onerror="this.style.display='none'">
+  <span data-user="name"></span>
+</span></header>
 
 <!-- ===== LOGIN MODAL ===== -->
 <div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
@@ -351,7 +277,7 @@
 </div>
 
 <div class="carousel-wrap"><button class="carousel-arrow arrow-prev" onclick="prevSlide()">‹</button><button class="carousel-arrow arrow-next" onclick="nextSlide()">›</button><div class="carousel-track" id="carouselTrack"></div><div class="carousel-dots" id="carouselDots"></div></div>
-<div class="search-section">
+<div class="search-section" id="searchSection">
   <div class="search-card">
     <div class="search-row">
       <div class="search-input-wrap">
@@ -376,6 +302,8 @@
       </div>
       <span style="width:1px;height:20px;background:var(--border);flex-shrink:0;"></span>
       <div class="diff-tags">
+        <button class="diff-tag basic" onclick="filterDifficulty(this,'BASIC')">BASIC</button>
+        <button class="diff-tag advanced" onclick="filterDifficulty(this,'ADVANCED')">ADVANCED</button>
         <button class="diff-tag expert" onclick="filterDifficulty(this,'EXPERT')">EXPERT</button>
         <button class="diff-tag master" onclick="filterDifficulty(this,'MASTER')">MASTER</button>
         <button class="diff-tag ultima" onclick="filterDifficulty(this,'ULTIMA')">ULTIMA</button>
@@ -399,7 +327,7 @@
 <!-- ===== CHART GRID ===== -->
 <div class="grid-section">
   <div class="section-header">
-    <div class="section-title">所有自製譜面</div>
+    <div class="section-title" id="chartSectionTitle">所有自製譜面</div>
     <span class="result-count" id="resultCount">載入中…</span>
   </div>
   <div class="chart-grid" id="chartGrid"></div>
@@ -423,9 +351,7 @@
       </p>
     </div>
     <div class="footer-links">
-      <a href="#">💬 官方 Discord 社群</a>
-      <a href="#">🛠️ UMIGURI 模擬器教學</a>
-      <a href="#">🎼 Margrete 工具下載</a>
+    <a href="https://umgr.inonote.jp/en/" target="_blank" rel="noopener noreferrer">UMIGURI/Margrete官網</a>
       <a href="#">📋 投稿規則</a>
     </div>
   </div>
@@ -438,16 +364,6 @@ const modalOverlay = document.getElementById('modalOverlay');
 function openModal() { modalOverlay.classList.add('open'); }
 function closeModal() { modalOverlay.classList.remove('open'); }
 function handleOverlayClick(e) { if (e.target === modalOverlay) closeModal(); }
-
-// ---- Drawer ----
-function openDrawer() {
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawerOverlay').classList.add('open');
-}
-function closeDrawer() {
-  document.getElementById('drawer').classList.remove('open');
-  document.getElementById('drawerOverlay').classList.remove('open');
-}
 
 // ---- Range Slider ----
 function updateRange(type, val) {
