@@ -350,14 +350,12 @@ export async function getMyCommunityRating(chartId) {
 // ╚══════════════════════════════════════════════════════════╝
 
 /**
- * 記錄下載（呼叫後再提供下載 URL）
+ * 原子化記錄登入帳號的唯一下載，回傳資料庫真實總數。
  */
 export async function recordDownload(chartId) {
-  const { error } = await supabase.from('downloads').insert({
-    chart_id: chartId,
-    user_id:  currentUser?.id ?? null,
-  });
+  const { data, error } = await supabase.rpc('record_chart_download', { target_chart: chartId });
   if (error) throw error;
+  return data;
 }
 
 // ╔══════════════════════════════════════════════════════════╗

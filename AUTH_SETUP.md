@@ -31,7 +31,6 @@ https://azxdxd.github.io/Shit-Chart-Bar/
 https://azxdxd.github.io/Shit-Chart-Bar/index.html
 https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html
 https://azxdxd.github.io/Shit-Chart-Bar/charter_studio.html
-https://azxdxd.github.io/Shit-Chart-Bar/viewer.html
 https://azxdxd.github.io/Shit-Chart-Bar/**
 http://localhost:5500/**
 http://127.0.0.1:5500/**
@@ -156,6 +155,6 @@ Google login clicked 或 Discord login clicked
 如果有點擊但 module load failed，檢查 auth.js、supabase.js、esm.sh。
 如果有 signInWithOAuth 但未跳轉，查看 [Auth] OAuth failed (...) 與 Network。
 
-發布至少包含四個 HTML、js/login-controls.js、js/auth.js、js/supabase.js；
+發布至少包含三個 HTML、js/login-controls.js、js/auth.js、js/supabase.js；
 只修改本機檔案不會自動更新 GitHub Pages。這次未推送或更改遠端 Provider 設定。
 測試：node tests/auth.test.mjs 與 node tests/login-controls.test.mjs。

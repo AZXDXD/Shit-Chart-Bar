@@ -82,10 +82,9 @@ for (const startUrl of [
   'https://azxdxd.github.io/Shit-Chart-Bar/index.html',
   'https://azxdxd.github.io/Shit-Chart-Bar/chart_detail.html?id=42&sort=new',
   'https://azxdxd.github.io/Shit-Chart-Bar/charter_studio.html',
-  'https://azxdxd.github.io/Shit-Chart-Bar/viewer.html?id=42',
   'http://localhost:5500/',
   'http://127.0.0.1:5500/chart_detail.html?id=42',
-  'http://127.0.0.1:8080/Shit-Chart-Bar/viewer.html?id=42',
+  'http://127.0.0.1:8080/Shit-Chart-Bar/chart_detail.html?id=42',
 ]) {
   context.location.href = startUrl;
   for (const provider of ['Google', 'Discord']) {
@@ -116,7 +115,7 @@ await vm.runInContext('initAuth()', reloadContext);
 assert.equal(listenerCount, 2);
 while (queued.length) await queued.shift()();
 
-for (const file of ['index.html', 'chart_detail.html', 'charter_studio.html', 'viewer.html']) {
+for (const file of ['index.html', 'chart_detail.html', 'charter_studio.html']) {
   const html = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
   assert.equal((html.match(/src="js\/auth.js"/g) || []).length, 1, file + ': exactly one auth entry point');
   assert.equal((html.match(/src="js\/login-controls.js"/g) || []).length, 1, file + ': exactly one click entry point');

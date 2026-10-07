@@ -12,7 +12,7 @@ for (const hash of ['', '#invalid', '#profile', '#manage', '#upload']) {
   for (const id of ['manage','profile','upload','manage','profile']) { context.window.switchPage(id); check(id); }
   context.location.hash='#upload'; handlers.hashchange(); check('upload');
 }
-for (const page of ['index.html','chart_detail.html','viewer.html','charter_studio.html']) {
+for (const page of ['index.html','chart_detail.html','charter_studio.html']) {
   const html=fs.readFileSync(page,'utf8');
   assert.ok(html.includes('data-account-link href="charter_studio.html#profile"'));
   assert.equal((html.match(/src="js\/account-navigation.js"/g)||[]).length,1);
