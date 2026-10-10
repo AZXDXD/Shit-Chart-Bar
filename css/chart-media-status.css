@@ -1,0 +1,20 @@
+.chart-status-overlay { position:absolute; top:12px; left:12px; display:flex; flex-direction:column; align-items:flex-start; gap:6px; max-width:calc(100% - 24px); z-index:2; pointer-events:none; }
+.chart-media-status .media-status { display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box; width:88px; max-width:100%; min-height:24px; padding:3px 8px; border:1px solid; border-radius:6px; font-size:11px; line-height:16px; font-weight:700; white-space:nowrap; }
+.media-strip { color:#7de8fa; border-color:#3de4ff55; background:#153b46; }
+.media-video { color:#9ee5b6; border-color:#4eac6e66; background:#183b28; }
+.media-missing { color:#b0b0bd; border-color:#66667766; background:#242431; }
+.chart-item[role="link"] { cursor:pointer; }
+.chart-item[role="link"]:focus-visible { outline:2px solid #ffa040; outline-offset:2px; }
+.chart-status-overlay .media-status { box-shadow:0 2px 5px #0005; }
+.card-cover, .rel-cover, .chart-item-cover { position:relative; overflow:hidden; }
+/* Only the account list places media badges beside the cover. */
+.my-chart-item .chart-item-main { display:flex; align-items:flex-start; gap:16px; flex:1; min-width:240px; }
+.my-chart-item .chart-item-info { min-width:0; }
+.my-chart-item .chart-item-title { overflow-wrap:anywhere; }
+.my-chart-item .chart-status-inline { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+@media (max-width:780px) {
+  .my-chart-item .chart-item-main { width:100%; min-width:0; flex:auto; }
+}
+/* Reserve the left badge column even on narrow grid cards. */
+.card-cover .worlds-end-overlay { max-width:calc(100% - 124px); }
+.card-cover .worlds-end-overlay .card-diff-badge { max-width:100%; white-space:normal; text-align:right; overflow-wrap:anywhere; box-sizing:border-box; }

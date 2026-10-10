@@ -1,3 +1,4 @@
+import { renderChartMediaStatus } from '../js/chart-media-status.js';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ function element(id){
 }
 const events={},calls=[];
 let reply;
-const ctx=vm.createContext({chartLevel,renderWeAttribute,console,location:{hash:'#favorites'},currentUser:{id:'a'},
+const ctx=vm.createContext({renderChartMediaStatus,chartLevel,renderWeAttribute,console,location:{hash:'#favorites'},currentUser:{id:'a'},
   window:{addEventListener(name,fn){events[name]=fn;}},
   document:{addEventListener(){},getElementById:element,querySelectorAll:()=>[]},
   renderChartCover:()=>'',escapeHtml:value=>String(value??''),

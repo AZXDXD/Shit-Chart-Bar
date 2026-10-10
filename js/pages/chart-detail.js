@@ -1,4 +1,5 @@
 import { chartLevel, isWorldsEnd } from '../chart-metadata.js';
+import { renderChartMediaStatus } from '../chart-media-status.js';
 import { supabase } from '../supabase.js';
 import { initAuth, currentUser, openLoginModal } from '../auth.js';
 import { getStripViewer } from '../chart-strip-viewer.js';
@@ -193,7 +194,7 @@ async function loadTags() {
 }
 async function loadRelated() {
   const charts=await searchCharts({limit:5});
-  el('relatedCharts').innerHTML=charts.filter(row=>row.id!==id).slice(0,4).map(row=>`<a class="rel-card" href="chart_detail.html?id=${encodeURIComponent(row.id)}" style="color:inherit;text-decoration:none"><div class="rel-cover">${row.cover_url?`<img src="${esc(row.cover_url)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'🎵'}</div><div class="rel-body"><div class="rel-title">${esc(row.title)}</div><div class="rel-designer">${esc(row.charter_name)}</div><div class="rel-foot">${esc(row.difficulty === 'WORLDS_END' ? "WORLD'S END" : row.difficulty)} ${esc(chartLevel(row))}</div></div></a>`).join('') || '目前沒有其他公開譜面';
+  el('relatedCharts').innerHTML=charts.filter(row=>row.id!==id).slice(0,4).map(row=>`<a class="rel-card" href="chart_detail.html?id=${encodeURIComponent(row.id)}" style="color:inherit;text-decoration:none"><div class="rel-cover">${row.cover_url?`<img src="${esc(row.cover_url)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'🎵'}${renderChartMediaStatus(row)}</div><div class="rel-body"><div class="rel-title">${esc(row.title)}</div><div class="rel-designer">${esc(row.charter_name)}</div><div class="rel-foot">${esc(row.difficulty === 'WORLDS_END' ? "WORLD'S END" : row.difficulty)} ${esc(chartLevel(row))}</div></div></a>`).join('') || '目前沒有其他公開譜面';
 }
 el('favBtn').onclick=()=>{if(loginRequired())return;action(el('favBtn'),async()=>{const favorite=await toggleFavorite(id);el('favBtn').classList.toggle('active',favorite);el('favBtn').setAttribute('aria-pressed',String(favorite));el('favText').textContent=favorite?'已收藏':'收藏譜面';message(favorite?'已收藏':'已取消收藏');});};
 el('communitySubmit').onclick=()=>{if(loginRequired())return;action(el('communitySubmit'),async()=>{

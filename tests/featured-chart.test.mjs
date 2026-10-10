@@ -1,3 +1,4 @@
+import { renderChartMediaStatus } from '../js/chart-media-status.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -10,7 +11,7 @@ const charts=[
   {id:'uuid-b',title:'Second',composer:'B',charter_name:'Beta',difficulty:'EXPERT',rating:12,cover_url:null},
 ];
 const slides=charts.map(()=>({setAttribute(){}}));
-const context=vm.createContext({chartLevel,renderWeAttribute,URL,console,window:{addEventListener(){}},setInterval(){},
+const context=vm.createContext({renderChartMediaStatus,chartLevel,renderWeAttribute,URL,console,window:{addEventListener(){}},setInterval(){},
   document:{addEventListener(){},getElementById:id=>id==='carouselTrack'?track:dots,
     querySelectorAll:selector=>selector.includes('carousel-slide')?slides:[]},
   searchCharts:async()=>charts,

@@ -14,30 +14,57 @@ import { normalizeTags } from './chart-tags.js';
  * @param {Object} opts
  * @param {string}  opts.query      - 關鍵字
  * @param {string}  opts.difficulty - 'BASIC'|'ADVANCED'|'EXPERT'|'MASTER'|'ULTIMA'|'WORLDS_END'|null
+ * @param {string[]} opts.difficulties - New multi-search RPC; [] means all. Omit for legacy RPC.
  * @param {number}  opts.minRating  - 最小定數
  * @param {number}  opts.maxRating  - 最大定數
  * @param {string}  opts.sortBy     - 'published_at'|'avg_rating'|'download_count'|'rating_desc'
  * @param {number}  opts.page       - 頁碼（從 0 開始）
  * @param {number}  opts.limit      - 每頁筆數
+ * @returns {Array} Chart rows. Multi-search arrays also carry totalCount, including empty pages.
  */
 export async function searchCharts({
-  query = '', difficulty = null, minRating = 1.0, maxRating = null,
+  query = '', difficulty = null, difficulties = undefined, minRating = 1.0, maxRating = null,
   sortBy = 'published_at', page = 0, limit = 20, tagId = null, weStarLevel = null, weAttribute = null,
 } = {}) {
-  const { data, error } = await supabase.rpc('search_charts', {
+  // An explicit array opts into the new RPC; legacy callers retain all ten arguments.
+  const multi = difficulties !== undefined;
+  if (multi && (!Array.isArray(difficulties) || difficulties.some(d => !['BASIC','ADVANCED','EXPERT','MASTER','ULTIMA','WORLDS_END'].includes(d)))) {
+    throw new Error('無效的難度篩選');
+  }
+  const selected = multi ? [...new Set(difficulties)] : [];
+  const onlyWe = multi ? selected.length === 1 && selected[0] === 'WORLDS_END' : difficulty === 'WORLDS_END';
+  const includeWe = multi ? !selected.length || selected.includes('WORLDS_END') : onlyWe;
+  const { data, error } = await supabase.rpc(multi ? 'search_charts_multi' : 'search_charts', {
     query,
     tag_filter: tagId,
-    diff:        difficulty,
-    min_r:       difficulty === 'WORLDS_END' ? null : minRating,
-    max_r:       difficulty === 'WORLDS_END' ? null : maxRating,
-    we_star_filter: difficulty === 'WORLDS_END' ? weStarLevel : null,
-    we_attribute_filter: difficulty === 'WORLDS_END' ? weAttribute : null,
+    ...(multi ? {diffs: selected.length ? selected : null} : {diff: difficulty}),
+    min_r:       onlyWe ? null : minRating,
+    max_r:       onlyWe ? null : maxRating,
+    we_star_filter: includeWe ? weStarLevel : null,
+    we_attribute_filter: includeWe ? weAttribute : null,
     sort_by:     sortBy,
     page_limit:  limit,
     page_offset: page * limit,
   });
-  if (error) throw error;
-  return data.map(enrichChart);
+  if (error) {
+    if (multi && ['PGRST202','42883'].includes(error.code)) throw new Error('多選難度搜尋尚未部署，請先部署新的搜尋 migration');
+    throw error;
+  }
+  const rows = multi ? data.charts : data;
+  const missingMedia = rows.filter(row => row.youtube_url === undefined || row.strip_path === undefined);
+  if (missingMedia.length) {
+    // Existing search RPCs omit youtube_url. One RLS-protected query per page.
+    const {data: media, error: mediaError} = await supabase.from('charts')
+      .select('id, strip_path, youtube_url').in('id', missingMedia.map(row => row.id));
+    if (mediaError) throw mediaError;
+    const byId = new Map(media.map(row => [row.id, row]));
+    for (const row of missingMedia) Object.assign(row, {strip_path:null, youtube_url:null}, byId.get(row.id));
+  }
+  const charts = rows.map(enrichChart);
+  if (!multi) return charts;
+  // Preserve the existing array API while retaining metadata on an empty page.
+  Object.defineProperty(charts, 'totalCount', {value: Number(data.total_count)});
+  return charts;
 }
 
 /**

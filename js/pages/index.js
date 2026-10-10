@@ -1,10 +1,10 @@
 import { chartLevel, renderWeAttribute } from '../chart-metadata.js';
+import { renderChartMediaStatus } from '../chart-media-status.js';
 // ============================================================
 // js/pages/index.js — 首頁邏輯（接入真實後端）
 // ============================================================
-import { initAuth, requireAuth, currentUser } from '../auth.js';
+import { initAuth, currentUser } from '../auth.js';
 import { searchCharts, getAllTags, getMyFavorites } from '../api.js';
-import { downloadChart } from '../storage.js';
 import { supabase } from '../supabase.js';
 import { renderChartCover, escapeHtml } from '../chart-cover.js';
 
@@ -30,7 +30,7 @@ window.addEventListener('authLogout', () => {
 let currentFilter = {
   query:      '',
   tagId: null,
-  difficulty: null,
+  difficulties: [],
   minRating:  1.0,
   maxRating:  null,
   weStarLevel: null, weAttribute: null,
@@ -132,14 +132,25 @@ async function loadCharts(reset = false) {
       page:  currentPage,
       limit: 20,
     }));
+    // A filter change while awaiting a request must not render an obsolete page.
+    if (pendingReset) { isLoading=false; pendingReset=false; loadCharts(true); return; }
     // Discard responses from another route/account before showing any cards.
     if (requestedFavorites !== favoritesMode || (requestedFavorites && requestedUser !== currentUser?.id)) {
       isLoading = false; pendingReset = false; loadCharts(true); return;
     }
 
+    const total = !favoritesMode && charts.totalCount != null ? charts.totalCount : null;
+    if (!favoritesMode && charts.length === 0 && total > 0 && currentPage > 0) {
+      // Results may shrink between requests. Recover without losing filters.
+      isLoading = false;
+      return loadCharts(true);
+    }
+
     if (reset) grid.innerHTML = '';
 
-    if (charts.length === 0 && reset) {
+    if (charts.length === 0 && (reset || total === 0)) {
+      hasMore = false;
+      currentPage = 0;
       grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dimmer);">${favoritesMode ? '目前沒有已收藏譜面' : '沒有找到符合條件的譜面'}</div>`;
       document.getElementById('resultCount').textContent = '0 筆';
       document.getElementById('loadMoreBtn').style.display = 'none';
@@ -150,11 +161,13 @@ async function loadCharts(reset = false) {
 
     charts.forEach(chart => grid.insertAdjacentHTML('beforeend', renderCard(chart)));
 
-    hasMore = charts.length === 20;
+    hasMore = total !== null ? (currentPage * 20 + charts.length < total) : charts.length === 20;
     currentPage++;
     document.getElementById('loadMoreBtn').style.display = hasMore ? '' : 'none';
 
-    if (reset) {
+    if (total !== null) {
+      document.getElementById('resultCount').textContent = `共 ${total} 筆`;
+    } else if (reset) {
       // 更新結果數（從 RPC 無法直接拿 total，簡易顯示）
       document.getElementById('resultCount').textContent = hasMore
         ? `${charts.length}+ 筆` : `共 ${charts.length} 筆`;
@@ -190,20 +203,13 @@ function renderCard(chart) {
   return `
     <div class="chart-card" onclick="location.href='chart_detail.html?id=${chart.id}'">
       <div class="card-cover">
+        ${renderChartMediaStatus(chart)}
         ${coverUrl}
         <div class="worlds-end-overlay">
         <span class="card-diff-badge ${DIFF_CLASS[chart.difficulty] || 'diff-master'}">
           ${chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty} ${escapeHtml(chartLevel(chart))}
         </span>
         ${renderWeAttribute(chart)}
-        </div>
-        ${chart.strip_url ? '<span class="card-viewer-badge">🖼️ 展譜圖</span>' : ''}
-        <div class="card-hover-actions">
-          ${chart.strip_url ? `<button class="card-hover-btn" onclick="event.stopPropagation();location.href='chart_detail.html?id=${chart.id}'">🖼️ 展譜</button>` : ''}
-          <button class="card-hover-btn primary"
-            onclick="event.stopPropagation();handleDownload(event,'${chart.id}')">
-            📦 下載
-          </button>
         </div>
       </div>
       <div class="card-body">
@@ -227,28 +233,19 @@ function renderCard(chart) {
   `;
 }
 
-// ── 下載處理（需登入 or 訪客皆可，但記錄需登入） ─────────────
-window.handleDownload = async function(e, chartId) {
-  e.stopPropagation();
-  try {
-    await downloadChart(chartId);
-  } catch(err) { alert('下載失敗：' + err.message); }
-};
-
 // ── 難度篩選 ─────────────────────────────────────────────────
 window.filterDifficulty = function(btn, diff) {
   const isActive = btn.classList.toggle('active');
-  currentFilter.difficulty = isActive ? diff : null;
-  const we = currentFilter.difficulty === 'WORLDS_END';
-  document.getElementById('constantFilters').hidden = we;
-  document.getElementById('constantLabel').hidden = we;
-  document.getElementById('weFilters').hidden = !we;
-  currentFilter.weStarLevel = we ? Number(document.getElementById('weSearchStar').value) || null : null;
-  currentFilter.weAttribute = we ? document.getElementById('weSearchAttribute').value.trim() || null : null;
-  // 互斥：取消其他
-  document.querySelectorAll('.diff-tag').forEach(b => {
-    if (b !== btn) b.classList.remove('active');
-  });
+  btn.setAttribute('aria-pressed', String(isActive));
+  currentFilter.difficulties = isActive
+    ? [...new Set([...currentFilter.difficulties, diff])]
+    : currentFilter.difficulties.filter(value => value !== diff);
+  const onlyWe = currentFilter.difficulties.length === 1 && currentFilter.difficulties[0] === 'WORLDS_END';
+  const includeWe = !currentFilter.difficulties.length || currentFilter.difficulties.includes('WORLDS_END');
+  document.getElementById('constantFilters').hidden = onlyWe;
+  document.getElementById('constantLabel').hidden = onlyWe;
+  document.getElementById('weFilters').hidden = !includeWe;
+  // Preserve both groups' values when switching difficulty selections.
   loadCharts(true);
 };
 
@@ -305,6 +302,7 @@ async function loadFeatured() {
       const extraTags=(chart.tags || []).length-4;
       return `<div class="carousel-slide" style="width:${100/featuredCount}%">
         <div class="carousel-bg">${renderChartCover(chart,{priority:index===0})}</div>
+        ${renderChartMediaStatus(chart)}
         <div class="carousel-overlay"></div>
         <a class="carousel-card-link" href="${detailUrl}" aria-label="${escapeHtml(chart.title)}：查看譜面詳情"></a>
         <div class="carousel-content"><div class="carousel-info">
@@ -313,10 +311,9 @@ async function loadFeatured() {
           <div class="carousel-meta">${escapeHtml(chart.composer)} · Chart by ${escapeHtml(chart.charter_name)}</div>
           <div class="carousel-details"><span class="difficulty-badge ${{BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'}[chart.difficulty] || ''}">${escapeHtml(chart.difficulty === 'WORLDS_END' ? "WORLD'S END" : chart.difficulty)} ${escapeHtml(chartLevel(chart))}</span><span class="carousel-rating">★ ${Number(chart.avg_rating || 0).toFixed(1)} (${Number(chart.review_count || 0)})</span></div>
           <div class="carousel-tags">${tags}${extraTags>0?`<span class="carousel-tag">+${extraTags}</span>`:''}</div>
-        </div><div class="carousel-actions"><a class="btn-viewer" href="${detailUrl}">查看譜面詳情</a><button class="btn-dl" data-chart-id="${escapeHtml(chart.id)}">📦 下載遊玩包</button></div></div>
+        </div><div class="carousel-actions"><a class="btn-viewer" href="${detailUrl}">查看譜面詳情</a></div></div>
       </div>`;
     }).join('');
-    track.querySelectorAll('.btn-dl').forEach(button=>button.addEventListener('click',event=>window.handleDownload(event,button.dataset.chartId)));
     document.getElementById('carouselDots').innerHTML=charts.map((_,index)=>`<button class="dot ${index===0?'active':''}" onclick="goSlide(${index})" aria-label="第 ${index+1} 張譜面"></button>`).join('');
     window.goSlide(0);
     if(featuredCount>1)setInterval(()=>window.nextSlide(),4500);

@@ -1,4 +1,5 @@
 import { chartLevel, difficultyMetadata, renderWeAttribute } from '../chart-metadata.js';
+import { renderChartMediaStatus } from '../chart-media-status.js';
 import { createTagEditor } from '../chart-tags.js';
 import { searchChartTags, getAllTags } from '../api.js';
 // ============================================================
@@ -365,7 +366,8 @@ function renderChartItem(chart) {
   const DIFF_CLASS = {BASIC:'diff-basic',ADVANCED:'diff-advanced',EXPERT:'diff-expert',MASTER:'diff-master',ULTIMA:'diff-ultima',WORLDS_END:'diff-we'};
   const isPublished = chart.status === 'published';
   return `
-    <div class="chart-item">
+    <div class="chart-item my-chart-item" role="link" tabindex="0" onclick="if(!event.target.closest('.chart-item-actions'))location.href='chart_detail.html?id=${chart.id}'" onkeydown="if(event.target===this && event.key==='Enter')location.href='chart_detail.html?id=${chart.id}'">
+      <div class="chart-item-main">
       <div class="chart-item-cover" style="overflow:hidden;">${cover}</div>
       <div class="chart-item-info">
         <div class="chart-item-title">${chart.title}</div>
@@ -378,6 +380,8 @@ function renderChartItem(chart) {
           </span>${renderWeAttribute(chart)}</div>
           <span>${chart.composer}</span>
         </div>
+        ${renderChartMediaStatus(chart, 'inline')}
+      </div>
       </div>
       ${isPublished ? `
         <div class="chart-item-stats">
