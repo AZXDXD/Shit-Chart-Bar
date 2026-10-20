@@ -4,7 +4,8 @@ import { renderChartMediaStatus } from '../chart-media-status.js';
 // js/pages/index.js — 首頁邏輯（接入真實後端）
 // ============================================================
 import { initAuth, currentUser } from '../auth.js';
-import { searchCharts, getAllTags, getMyFavorites } from '../api.js';
+import { searchCharts, getAllTags, getAllMyFavorites, removeMyFavorite } from '../api.js';
+import { defaultFavoriteFilters, filterFavorites } from '../favorites-search.js';
 import { supabase } from '../supabase.js';
 import { renderChartCover, escapeHtml } from '../chart-cover.js';
 
@@ -14,14 +15,18 @@ let isLoading     = false;
 let hasMore       = true;
 let pendingReset  = false;
 let favoritesMode = false;
+let favoriteFilters;
+let favoriteCollection = [];
 function updateListMode() {
   favoritesMode = location.hash === '#favorites';
   document.getElementById('searchSection').hidden = favoritesMode;
+  document.getElementById('favoriteSearchSection').hidden = !favoritesMode;
   document.getElementById('chartSectionTitle').textContent = favoritesMode ? '已收藏譜面' : '所有自製譜面';
 }
 window.addEventListener('hashchange', () => { updateListMode(); loadCharts(true); });
 window.addEventListener('authLogin', () => { if (favoritesMode) loadCharts(true); });
 window.addEventListener('authLogout', () => {
+  favoriteCollection = [];
   if (favoritesMode) {
     document.getElementById('chartGrid').replaceChildren();
     loadCharts(true);
@@ -39,8 +44,9 @@ let currentFilter = {
 
 // ── 初始化 ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  await initAuth();
   updateListMode();
+  initializeFavoriteSearch();
+  await initAuth();
   await Promise.all([loadTags(), loadCharts(true), loadFeatured()]);
 
   // 搜尋框 debounce
@@ -127,11 +133,20 @@ async function loadCharts(reset = false) {
   }
 
   try {
-    const charts = await (favoritesMode ? getMyFavorites({page:currentPage,limit:20}) : searchCharts({
+    let charts;
+    if (favoritesMode) {
+      favoriteFilters ||= defaultFavoriteFilters();
+      // Filter the entire owner-scoped collection before slicing a display page.
+      const collection = reset ? await getAllMyFavorites() : favoriteCollection;
+      if (requestedUser === currentUser?.id) favoriteCollection = collection;
+      const results = filterFavorites(collection, favoriteFilters);
+      charts = results.slice(currentPage * 20, (currentPage + 1) * 20);
+      charts.totalCount = results.length;
+    } else charts = await searchCharts({
       ...currentFilter,
       page:  currentPage,
       limit: 20,
-    }));
+    });
     // A filter change while awaiting a request must not render an obsolete page.
     if (pendingReset) { isLoading=false; pendingReset=false; loadCharts(true); return; }
     // Discard responses from another route/account before showing any cards.
@@ -139,8 +154,8 @@ async function loadCharts(reset = false) {
       isLoading = false; pendingReset = false; loadCharts(true); return;
     }
 
-    const total = !favoritesMode && charts.totalCount != null ? charts.totalCount : null;
-    if (!favoritesMode && charts.length === 0 && total > 0 && currentPage > 0) {
+    const total = charts.totalCount != null ? charts.totalCount : null;
+    if (charts.length === 0 && total > 0 && currentPage > 0) {
       // Results may shrink between requests. Recover without losing filters.
       isLoading = false;
       return loadCharts(true);
@@ -151,7 +166,7 @@ async function loadCharts(reset = false) {
     if (charts.length === 0 && (reset || total === 0)) {
       hasMore = false;
       currentPage = 0;
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dimmer);">${favoritesMode ? '目前沒有已收藏譜面' : '沒有找到符合條件的譜面'}</div>`;
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dimmer);">${favoritesMode ? (favoriteCollection.length ? '沒有符合搜尋條件的已收藏譜面，請調整或清除篩選' : '目前沒有已收藏譜面') : '沒有找到符合條件的譜面'}</div>`;
       document.getElementById('resultCount').textContent = '0 筆';
       document.getElementById('loadMoreBtn').style.display = 'none';
       isLoading = false;
@@ -174,6 +189,9 @@ async function loadCharts(reset = false) {
     }
   } catch(e) {
     console.error('loadCharts:', e);
+    if (requestedFavorites !== favoritesMode || (requestedFavorites && requestedUser !== currentUser?.id)) {
+      isLoading = false; pendingReset = false; return loadCharts(true);
+    }
     if (reset) {
       const message = /invalid input value for enum difficulty_type/.test(e.message)
         ? '此難度尚未啟用，請稍後再試' : `載入失敗：${e.message}`;
@@ -213,6 +231,7 @@ function renderCard(chart) {
         </div>
       </div>
       <div class="card-body">
+        ${favoritesMode ? `<button type="button" class="btn-load-more" data-remove-favorite="${chart.id}" style="padding:6px 10px;margin-bottom:8px">取消收藏</button>` : ''}
         <div class="card-title">${chart.title}</div>
         <div class="card-composer">${chart.composer}</div>
         <div class="card-designer">Chart by <span>${chart.charter_name}</span></div>
@@ -268,6 +287,55 @@ window.toggleTopicTag = function(btn, tagId) {
 
 // 暴露給 window
 window.loadCharts = loadCharts;
+
+function initializeFavoriteSearch() {
+  favoriteFilters = defaultFavoriteFilters();
+  const form = document.getElementById('favoriteSearchForm');
+  if (!form) return;
+  const value = id => document.getElementById(id).value;
+  const apply = () => {
+    const min = value('favoriteMin') === '' ? null : Number(value('favoriteMin'));
+    const max = value('favoriteMax') === '' ? null : Number(value('favoriteMax'));
+    const error = document.getElementById('favoriteFilterError');
+    const invalid = [min,max].some(n => n !== null && (!Number.isFinite(n) || n < 1)) || (min !== null && max !== null && min > max);
+    error.hidden = !invalid; error.textContent = invalid ? '請輸入有效的定數範圍，最低定數不可大於最高定數。' : '';
+    if (invalid) return;
+    favoriteFilters = { ...favoriteFilters, query: value('favoriteQuery'), minRating: min, maxRating: max, weStarLevel: value('favoriteStars') ? Number(value('favoriteStars')) : null, strip: value('favoriteStrip'), video: value('favoriteVideo'), sortBy: value('favoriteSort') };
+    loadCharts(true);
+  };
+  let debounce;
+  form.addEventListener('input', event => {
+    if (event.target.id !== 'favoriteQuery') return;
+    clearTimeout(debounce); debounce = setTimeout(apply, 300);
+  });
+  form.addEventListener('change', () => { clearTimeout(debounce); apply(); });
+  form.addEventListener('click', event => {
+    const button = event.target.closest('[data-favorite-difficulty]');
+    if (!button) return;
+    const selected = button.classList.toggle('active');
+    button.setAttribute('aria-pressed', String(selected));
+    favoriteFilters.difficulties = [...form.querySelectorAll('[data-favorite-difficulty].active')].map(el => el.dataset.favoriteDifficulty);
+    clearTimeout(debounce); apply();
+  });
+  document.getElementById('clearFavoriteFilters').addEventListener('click', () => {
+    clearTimeout(debounce); form.reset(); favoriteFilters = defaultFavoriteFilters();
+    form.querySelectorAll('[data-favorite-difficulty]').forEach(el => { el.classList.remove('active'); el.setAttribute('aria-pressed','false'); });
+    apply();
+  });
+  document.getElementById('chartGrid').addEventListener('click', async event => {
+    const button = event.target.closest('[data-remove-favorite]');
+    if (!button) return;
+    event.preventDefault(); event.stopPropagation();
+    if (!favoritesMode || !currentUser) return;
+    const owner = currentUser.id; button.disabled = true;
+    try {
+      await removeMyFavorite(button.dataset.removeFavorite);
+      if (currentUser?.id !== owner || !favoritesMode) return;
+      favoriteCollection = favoriteCollection.filter(chart => chart.id !== button.dataset.removeFavorite);
+      await loadCharts(true);
+    } catch (error) { button.disabled = false; document.getElementById('resultCount').textContent = '取消收藏失敗：' + error.message; }
+  }, true);
+}
 
 // Keep each cover, metadata and UUID link together in its existing slide.
 let featuredSlide=0, featuredCount=0;

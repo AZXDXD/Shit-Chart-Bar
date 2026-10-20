@@ -235,6 +235,19 @@
       .stats-grid { grid-template-columns:1fr 1fr; }
       .step-label { display:none; }
     }
+.my-chart-search { background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px; }
+.my-chart-search .search-row,.my-chart-search .filter-row { display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px; }
+.my-chart-search label { display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px; }
+.my-chart-search .my-chart-query { flex:1;min-width:0; }
+.my-chart-search input,.my-chart-search select { background:var(--bg3);color:var(--text);border:1px solid var(--border-b);border-radius:6px;padding:9px;max-width:100%; }
+.my-chart-query input { flex:1;min-width:120px; }
+.my-chart-search input[type="number"] { width:100px; }
+.my-chart-search .diff-tags { display:flex;flex-wrap:wrap;gap:8px; }
+.my-chart-search .diff-tag { border-radius:16px;padding:6px 10px;cursor:pointer;font-weight:700;font-size:12px; }
+.my-chart-hint { font-size:12px;color:var(--dim);line-height:1.7; }
+#myChartPagination { text-align:center;margin:20px 0; }
+#myChartFilterError { color:#ff9999;font-size:13px;margin-top:8px; }
+@media(max-width:480px) { .my-chart-search { padding:14px; } .my-chart-search .my-chart-query { flex-basis:100%; } }
 </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
@@ -347,7 +360,7 @@
         <div class="check-item">
           <div class="check-icon" id="ci-cover" style="border-color:var(--border-b);color:var(--dimmer);">?</div>
           <div>
-            <div style="font-size:14px;font-weight:600;">曲繪封面 (.jpg / .png)</div>
+            <div style="font-size:14px;font-weight:600;">曲繪封面 (.jpg)</div>
             <div style="font-size:12px;color:var(--dimmer);">必要檔案</div>
           </div>
           <div class="check-detail" id="cd-cover">等待上傳…</div>
@@ -498,7 +511,7 @@
         <button class="btn-prev" onclick="goStep(2)">← 返回資訊</button>
         <div style="display:flex;align-items:center;gap:12px;">
           <span class="step-indicator">步驟 3 / 3</span>
-          <label class="field-label">更新封面（JPG / PNG / WebP）<input id="coverEditInput" type="file" accept="image/png,image/jpeg,image/webp" onchange="handleCoverChange(this)"></label><button class="btn-next" onclick="saveDraft()" style="background:rgba(255,111,0,.1);border:1px solid var(--orange);color:var(--orange-l);box-shadow:none;">草稿儲存</button>
+          <label class="field-label">更新封面（JPG）<input id="coverEditInput" type="file" accept=".jpg" onchange="handleCoverChange(this)"></label><button class="btn-next" onclick="saveDraft()" style="background:rgba(255,111,0,.1);border:1px solid var(--orange);color:var(--orange-l);box-shadow:none;">草稿儲存</button>
           <button class="btn-publish" onclick="publishChart()">🚀 立即發布</button>
         </div>
       </div>
@@ -541,7 +554,17 @@
       <button class="btn-next" onclick="switchPage('upload', document.querySelector('.page-tab'))">+ 投稿新譜面</button>
     </div>
 
+<form id="myChartSearchForm" class="my-chart-search" aria-label="搜尋我的譜面">
+  <div class="search-row"><label class="my-chart-query">搜尋 <input id="myChartQuery" type="search" placeholder="歌曲名稱、譜師名稱、標籤…"></label><label>排序 <select id="myChartSort"><option value="newest">最新投稿</option><option value="oldest">最早投稿</option><option value="updated">最近修改</option><option value="title_asc">歌曲名稱 A–Z</option></select></label></div>
+  <div class="filter-row"><span>難度（可複選）</span><div class="diff-tags"><button class="diff-tag basic diff-basic" type="button" data-my-chart-difficulty="BASIC" aria-pressed="false">BASIC</button><button class="diff-tag advanced diff-advanced" type="button" data-my-chart-difficulty="ADVANCED" aria-pressed="false">ADVANCED</button><button class="diff-tag expert diff-expert" type="button" data-my-chart-difficulty="EXPERT" aria-pressed="false">EXPERT</button><button class="diff-tag master diff-master" type="button" data-my-chart-difficulty="MASTER" aria-pressed="false">MASTER</button><button class="diff-tag ultima diff-ultima" type="button" data-my-chart-difficulty="ULTIMA" aria-pressed="false">ULTIMA</button><button class="diff-tag we diff-we" type="button" data-my-chart-difficulty="WORLDS_END" aria-pressed="false">WORLD'S END</button></div></div>
+  <div class="filter-row"><label>最低定數 <input id="myChartMin" type="number" min="1" step="0.1" placeholder="不限"></label><label>最高定數 <input id="myChartMax" type="number" min="1" step="0.1" placeholder="不限"></label><label>WORLD'S END 星數 <select id="myChartStars"><option value="">不限</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label></div>
+  <div class="filter-row"><label>發布狀態 <select id="myChartStatus"><option value="">全部</option><option value="published">已發布</option><option value="unpublished">未發布</option></select></label><label>展示譜 <select id="myChartStrip"><option value="">不限</option><option value="yes">有展示譜</option><option value="no">無展示譜</option></select></label><label>影片 <select id="myChartVideo"><option value="">不限</option><option value="yes">有影片</option><option value="no">無影片</option></select></label><button class="action-btn" type="button" id="clearMyChartFilters">清除篩選</button></div>
+  <p class="my-chart-hint">定數範圍適用於一般難度；星數適用於 WORLD'S END。「未發布」包含草稿與已下架譜面。</p>
+  <p id="myChartFilterError" role="alert" hidden></p>
+</form>
+<div id="myChartResultCount" aria-live="polite" style="margin-bottom:12px;color:var(--dim)"></div>
     <div id="myChartList" aria-live="polite">請先登入以管理你的譜面</div>
+    <div id="myChartPagination" hidden><button class="action-btn" type="button" id="myChartPrev">上一頁</button> <span id="myChartPageLabel"></span> <button class="action-btn" type="button" id="myChartNext">下一頁</button></div>
   </div><!-- /page-manage -->
 
   <!-- ============================================ -->

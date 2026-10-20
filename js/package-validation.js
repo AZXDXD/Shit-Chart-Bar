@@ -2,7 +2,7 @@
 export const missingMessages = {
   chart: '缺少譜面檔 (.ugc)',
   audio: '缺少音源檔 (.mp3 / .ogg / .wav)',
-  cover: '缺少曲繪封面 (.jpg / .png)',
+  cover: '缺少曲繪封面（需要 .jpg 格式）',
 };
 export function validContent(ext, bytes) {
   const text = new TextDecoder().decode(bytes.slice(0, 16));
@@ -23,7 +23,7 @@ export async function inspectEntries(entries) {
   for (const entry of entries) {
     if (entry.dir) continue;
     const ext = entry.name.split('.').pop().toLowerCase();
-    const kind = ext === 'ugc' ? 'chart' : ['mp3','ogg','wav'].includes(ext) ? 'audio' : ['jpg','png'].includes(ext) ? 'cover' : null;
+    const kind = ext === 'ugc' ? 'chart' : ['mp3','ogg','wav'].includes(ext) ? 'audio' : ext === 'jpg' ? 'cover' : null;
     if (!kind || found[kind]) continue;
     const bytes = await entry.async('uint8array');
     total += bytes.length;

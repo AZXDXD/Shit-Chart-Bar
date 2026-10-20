@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { inspectEntries } from '../js/package-validation.js';
 const entry = (name, bytes) => ({ name, async: async () => Uint8Array.from(bytes) });
-const files = [entry('nested/map.UGC',[65]), entry('audio.wav',[82,73,70,70,0,0,0,0,87,65,86,69]), entry('jacket.png',[137,80,78,71,13,10,26,10])];
+const files = [entry('nested/map.UGC',[65]), entry('audio.wav',[82,73,70,70,0,0,0,0,87,65,86,69]), entry('jacket.jpg',[255,216,255,224])];
 assert.equal((await inspectEntries(files)).missing.length,0);
 for (const [index,message] of [[0,'譜面'],[1,'音源'],[2,'曲繪']]) {
   const result = await inspectEntries(files.filter((_,i) => i !== index));

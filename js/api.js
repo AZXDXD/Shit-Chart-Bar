@@ -120,8 +120,26 @@ export async function getChartsByUser(userId, includesDrafts = false) {
 }
 
 /**
- * 建立新譜面（草稿）
+ * 完整取得目前登入者的管理列表（含未發布譜面與標籤）。
  */
+export async function getMyChartsForManagement() {
+  const owner = currentUser?.id;
+  if (!owner) return [];
+  const charts = [];
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase.from('charts')
+      .select('*, chart_tags (tags (name))').eq('user_id', owner)
+      .order('created_at', { ascending: false }).order('id', { ascending: true })
+      .range(page * 200, (page + 1) * 200 - 1);
+    if (error) throw error;
+    if (currentUser?.id !== owner) return [];
+    charts.push(...data.map(enrichChart));
+    if (data.length < 200) break;
+  }
+  return [...new Map(charts.map(chart => [chart.id, chart])).values()];
+}
+
+/** 建立新譜面（草稿）。 */
 export async function createChart(metadata) {
   if (!currentUser) throw new Error('請先登入');
   const { data, error } = await supabase
@@ -322,16 +340,36 @@ export async function toggleFavorite(chartId) {
   }
 }
 
-export async function getMyFavorites({ limit = 20, page = 0 } = {}) {
+export async function getMyFavorites({ limit = 20, page = 0, includeIdentity = false } = {}) {
   if (!currentUser) return [];
   const { data, error } = await supabase
     .from('favorites')
-    .select('chart_id, created_at, charts!inner (*)')
+    .select(includeIdentity ? 'chart_id, created_at, charts!inner (*, profiles:user_id (username, charter_name))' : 'chart_id, created_at, charts!inner (*)')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false })
+    .order('chart_id', { ascending: true })
     .range(page * limit, (page + 1) * limit - 1);
   if (error) throw error;
-  return data.filter(f => f.charts).map(f => enrichChart(f.charts));
+  return data.filter(f => f.charts).map(f => ({ ...enrichChart(f.charts), favorite_created_at: f.created_at }));
+}
+
+export async function getAllMyFavorites() {
+  const owner = currentUser?.id;
+  if (!owner) return [];
+  const charts = [];
+  for (let page = 0; ; page++) {
+    const batch = await getMyFavorites({ limit: 200, page, includeIdentity: true });
+    if (currentUser?.id !== owner) return [];
+    charts.push(...batch);
+    if (batch.length < 200) break;
+  }
+  return [...new Map(charts.map(chart => [chart.id, chart])).values()];
+}
+
+export async function removeMyFavorite(chartId) {
+  if (!currentUser) throw new Error('請先登入');
+  const { error } = await supabase.from('favorites').delete().eq('chart_id', chartId).eq('user_id', currentUser.id);
+  if (error) throw error;
 }
 
 // ╔══════════════════════════════════════════════════════════╗

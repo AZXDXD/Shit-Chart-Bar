@@ -231,6 +231,12 @@
       .carousel-title { font-size: 16px; }
     }
     @media (prefers-reduced-motion: reduce) { .carousel-track, .carousel-bg { transition: none; } }
+#favoriteSearchSection input[type="number"] { width:100px; }
+#favoriteSearchSection input, #favoriteSearchSection select { max-width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border-bright);border-radius:6px;padding:8px; }
+#favoriteSearchSection .filter-row label { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+#favoriteSearchSection .search-input { padding-left:14px; }
+#favoriteSearchSection[hidden] { display:none; }
+@media(max-width:480px) { #favoriteSearchSection .search-card { padding:16px; } #favoriteSearchSection .search-input-wrap { min-width:0;flex-basis:100%; } #favoriteSearchSection .diff-tags { flex-wrap:wrap; } }
 </style>
 <script defer src="js/login-controls.js"></script>
 <script type="module" src="js/auth.js"></script>
@@ -312,6 +318,20 @@
     </div>
   </div>
 </div>
+
+<section class="search-section" id="favoriteSearchSection" hidden aria-label="搜尋已收藏的譜面">
+  <form class="search-card" id="favoriteSearchForm" onsubmit="event.preventDefault()">
+    <div class="search-row"><div class="search-input-wrap"><input class="search-input" id="favoriteQuery" aria-label="搜尋收藏" placeholder="搜尋收藏的歌曲、譜師、創作者名稱…" type="search"></div>
+    <label>排序 <select class="sort-select" id="favoriteSort"><option value="newest">最近收藏</option><option value="oldest">最早收藏</option><option value="title_asc">歌曲名稱 A–Z</option><option value="title_desc">歌曲名稱 Z–A</option></select></label></div>
+    <div class="filter-row"><span class="filter-label">難度（可複選）</span><div class="diff-tags"><button type="button" class="diff-tag basic" data-favorite-difficulty="BASIC" aria-pressed="false">BASIC</button><button type="button" class="diff-tag advanced" data-favorite-difficulty="ADVANCED" aria-pressed="false">ADVANCED</button><button type="button" class="diff-tag expert" data-favorite-difficulty="EXPERT" aria-pressed="false">EXPERT</button><button type="button" class="diff-tag master" data-favorite-difficulty="MASTER" aria-pressed="false">MASTER</button><button type="button" class="diff-tag ultima" data-favorite-difficulty="ULTIMA" aria-pressed="false">ULTIMA</button><button type="button" class="diff-tag we" data-favorite-difficulty="WORLDS_END" aria-pressed="false">WORLD'S END</button></div></div>
+    <div class="filter-row" style="margin-top:16px"><label>最低定數 <input id="favoriteMin" type="number" min="1" step="0.1" placeholder="不限"></label><label>最高定數 <input id="favoriteMax" type="number" min="1" step="0.1" placeholder="不限"></label>
+    <label>WORLD'S END 星數 <select id="favoriteStars"><option value="">不限</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
+    <label>展示譜 <select id="favoriteStrip"><option value="">不限</option><option value="yes">有展示譜</option><option value="no">無展示譜</option></select></label>
+    <label>影片 <select id="favoriteVideo"><option value="">不限</option><option value="yes">有影片</option><option value="no">無影片</option></select></label><button type="button" class="btn-load-more" id="clearFavoriteFilters">清除篩選</button></div>
+    <p style="font-size:12px;color:var(--text-dimmer);margin-top:12px">定數範圍適用於一般難度；星數適用於 WORLD'S END。</p>
+    <p id="favoriteFilterError" role="alert" hidden></p>
+  </form>
+</section>
 
 <!-- ===== CHART GRID ===== -->
 <div class="grid-section">

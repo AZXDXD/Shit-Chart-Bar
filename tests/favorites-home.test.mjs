@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { chartLevel, renderWeAttribute } from '../js/chart-metadata.js';
+import { defaultFavoriteFilters, filterFavorites } from '../js/favorites-search.js';
 const elements=new Map();
 function element(id){
   if(!elements.has(id))elements.set(id,{style:{},innerHTML:'',textContent:'',replaceChildren(){this.innerHTML='';this.textContent='';},insertAdjacentHTML(position,html){this.innerHTML+=html;}});
@@ -10,11 +11,11 @@ function element(id){
 }
 const events={},calls=[];
 let reply;
-const ctx=vm.createContext({renderChartMediaStatus,chartLevel,renderWeAttribute,console,location:{hash:'#favorites'},currentUser:{id:'a'},
+const ctx=vm.createContext({defaultFavoriteFilters,filterFavorites,renderChartMediaStatus,chartLevel,renderWeAttribute,console,location:{hash:'#favorites'},currentUser:{id:'a'},
   window:{addEventListener(name,fn){events[name]=fn;}},
   document:{addEventListener(){},getElementById:element,querySelectorAll:()=>[]},
   renderChartCover:()=>'',escapeHtml:value=>String(value??''),
-  getMyFavorites:async options=>{calls.push(options);return new Promise(resolve=>{reply=resolve;});},
+  getAllMyFavorites:async ()=>{calls.push('all');return new Promise(resolve=>{reply=resolve;});},
   searchCharts:async()=>{throw Error('Favorites must not search public charts');},
 });
 vm.runInContext(fs.readFileSync('js/pages/index.js','utf8').replace(/^import .*;\r?\n/gm,''),ctx);
@@ -22,7 +23,7 @@ ctx.updateListMode();
 assert.equal(element('searchSection').hidden,true);
 assert.equal(element('chartSectionTitle').textContent,'已收藏譜面');
 const pending=ctx.loadCharts(true);
-assert.deepEqual(JSON.parse(JSON.stringify(calls[0])),{page:0,limit:20});
+assert.equal(calls[0],'all');
 ctx.currentUser=null;events.authLogout();
 reply([{id:'private-a',title:'Old account favorite',avg_rating:0}]);
 await pending;

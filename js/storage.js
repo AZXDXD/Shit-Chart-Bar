@@ -36,10 +36,9 @@ export async function uploadChartPackage(chartId, file, onProgress) {
 export async function uploadCoverArt(chartId, file, onProgress) {
   if (!currentUser) throw new Error('請先登入');
   const ext  = file.name.split('.').pop().toLowerCase();
-  if (!['jpg','jpeg','png','webp'].includes(ext)) throw new Error('封面圖請使用 JPG / PNG / WebP');
+  if (ext !== 'jpg') throw new Error('封面圖請使用 .jpg 格式');
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const webp = new TextDecoder().decode(bytes.slice(0,4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8,12)) === 'WEBP';
-  if (!(ext === 'webp' ? webp : validContent(ext === 'jpeg' ? 'jpg' : ext, bytes))) throw new Error('封面格式不正確');
+  if (!validContent('jpg', bytes)) throw new Error('封面格式不正確，請使用有效的 JPG 圖片');
   const path = `${currentUser.id}/${chartId}/cover-${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage

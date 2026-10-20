@@ -8,7 +8,7 @@ import { searchChartTags, getAllTags } from '../api.js';
 import { initAuth, currentUser, currentProfile, requireAuth, fetchProfile, getUserDisplayData, getProviderAvatar, updateAllAuthUI } from '../auth.js';
 import {
   createChart, updateChart, setChartStatus, deleteChart,
-  getChartsByUser, getChart, setChartTags, updateProfile,
+  getChartsByUser, getMyChartsForManagement, getChart, setChartTags, updateProfile,
 } from '../api.js';
 import {
   uploadChartPackage, uploadCoverArt, uploadChartStrip, uploadAvatar,
@@ -16,12 +16,18 @@ import {
 
 import { inspectPackage } from '../package-validation.js';
 import { renderChartCover } from '../chart-cover.js';
+import { createMyChartSearch } from '../my-charts-search.js';
 
 let editingChartId = null; // 目前正在編輯的草稿 ID
 let studioOwner = null;
+let myChartSearch;
+function getMyChartSearch() {
+  return myChartSearch ||= createMyChartSearch({ getUser: () => currentUser, fetchCharts: getMyChartsForManagement, renderItem: renderChartItem, updateStats: updateDashboardStats });
+}
 let editingExisting = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  getMyChartSearch();
   await initAuth();
 
   if (!currentUser) { requireAuth(() => {}); return; }
@@ -48,6 +54,7 @@ async function initializeStudio() {
 }
 window.addEventListener('authLogin', initializeStudio);
 window.addEventListener('authLogout', () => {
+  myChartSearch?.reset();
   tagEditor?.set([]);
   editingExisting = false; coverFile = null;
   editingChartId = null; uploadedPackageFile = null; packageCheck = null; stripFile = null;
@@ -224,7 +231,7 @@ async function createDraft() {
     const pkgPath = await uploadChartPackage(editingChartId, uploadedPackageFile,
       pct => updateProgressBar('pkgProgress', pct));
     const cover = packageCheck.found.cover;
-    const coverPath = await uploadCoverArt(editingChartId, new File([cover.bytes], 'cover.' + cover.ext, { type: cover.ext === 'png' ? 'image/png' : 'image/jpeg' }));
+    const coverPath = await uploadCoverArt(editingChartId, new File([cover.bytes], 'cover.jpg', { type: 'image/jpeg' }));
     await updateChart(editingChartId, { package_path: pkgPath, cover_path: coverPath });
     showToast('✓ 遊玩包上傳完成！');
   }
@@ -337,26 +344,7 @@ window.saveDraft = async function() {
 
 // ── 管理後台：載入我的譜面 ────────────────────────────────────
 async function loadMyCharts() {
-  const container = document.getElementById('myChartList');
-  if (!container) return;
-  if (!currentUser) { container.textContent = '請先登入以管理你的譜面'; return; }
-  const ownerId = currentUser.id;
-  container.innerHTML = '<div style="color:var(--dimmer);padding:20px;">載入中…</div>';
-
-  try {
-    const charts = await getChartsByUser(currentUser.id, true);
-    if (currentUser?.id !== ownerId) return;
-    updateDashboardStats(charts);
-    if (!charts.length) {
-      container.innerHTML = `<div style="color:var(--dimmer);padding:20px;">你目前還沒有投稿任何譜面 <button class="action-btn primary" onclick="switchPage('upload')">投稿自製譜</button></div>`;
-      return;
-    }
-    container.innerHTML = charts.map(renderChartItem).join('');
-    // 更新統計數字
-    updateDashboardStats(charts);
-  } catch(e) {
-    container.innerHTML = `<div style="color:#ef4444;padding:20px;">載入失敗：${escapeHtml(e.message)}</div>`;
-  }
+  await getMyChartSearch().load();
 }
 
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -525,7 +513,17 @@ window.toggleTagOpt = function(el) { el.classList.toggle('selected'); };
 window.closeModal = function() { document.getElementById('successModal')?.classList.remove('open'); };
 
 window.handleOverlayClick = e => { if (e.target.id === 'successModal') window.closeModal(); };
-window.handleCoverChange = input => { coverFile = input.files[0] || null; };
+window.handleCoverChange = input => {
+  coverFile = null;
+  const file = input.files[0];
+  if (!file) return;
+  if (!/\.jpg$/i.test(file.name)) {
+    input.value = '';
+    showToast('封面圖請使用 .jpg 格式', 'error');
+    return;
+  }
+  coverFile = file;
+};
 
 function syncDifficultyFields() {
   const we = getSelectedDiff() === 'WORLDS_END';

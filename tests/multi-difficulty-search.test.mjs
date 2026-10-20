@@ -66,5 +66,5 @@ assert.match(sql,/prosecdef/);assert.match(sql,/aclexplode\(old_acl\)/);
 assert.match(sql,/cardinality\(diffs\),0\)=0 OR c.difficulty = ANY\(diffs\)/);
 assert.match(sql,/SELECT count\(\*\) FROM matched/);assert.match(sql,/c.id ASC/);
 assert.match(sql,/matches<>1/);assert.match(sql,/BEGIN;[\s\S]*COMMIT;/);
-const html=fs.readFileSync('index.html','utf8');assert.equal((html.match(/aria-pressed="false"/g)||[]).length,6);
+const html=fs.readFileSync('index.html','utf8');assert.equal((html.slice(html.indexOf('id="searchSection"'),html.indexOf('id="favoriteSearchSection"')).match(/aria-pressed="false"/g)||[]).length,6);
 console.log('PASS: legacy RPC preserved; multi/none/all/WE payloads, combined filters, invalid/deployment errors, actual UI toggles/stale requests/page reset/total counts, empty-page metadata and range recovery. Mocked API/DOM; actual PostgreSQL verification is in multi-difficulty-postgres.cjs.');
